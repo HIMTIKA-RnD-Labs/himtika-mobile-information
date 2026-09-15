@@ -31,6 +31,11 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
   final List<TextEditingController> _nilaiTitleControllers = [];
   final List<TextEditingController> _nilaiDescControllers = [];
 
+  final List<TextEditingController> _maknaLogoTitleControllers = [];
+  final List<TextEditingController> _maknaLogoDescControllers = [];
+  final List<String> _maknaLogoIconUrls = [];
+  final Map<int, File> _maknaLogoSelectedFiles = {};
+
   File? _selectedLogoFile;
   final ImagePicker _picker = ImagePicker();
 
@@ -81,6 +86,33 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
     },
   ];
 
+  static const List<Map<String, String>> defaultMaknaLogo = [
+    {
+      'icon': 'src/features/himtika/kabinet/angsa.png',
+      'title': 'Angsa',
+      'description':
+          'Melambangkan harmoni yang diharapkan dapat dirasakan dan dipelihara serta dijaga oleh segenap pengurus dan anggota HIMTIKA',
+    },
+    {
+      'icon': 'src/features/himtika/kabinet/teratai.png',
+      'title': 'Bunga Teratai',
+      'description':
+          '8 Kelopak bunga teratai melambangkan pertumbuhan HIMTIKA yang mencapai generasi ke delapan dan tetap bertumbuh berkembang menjadi organisasi yang bermanfaat',
+    },
+    {
+      'icon': 'src/features/himtika/kabinet/daun.png',
+      'title': 'Daun',
+      'description':
+          '6 daun merefleksikan enam nilai utama yang akan dibangun dalam kepengurusan yaitu Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, dan Sistematis',
+    },
+    {
+      'icon': 'src/features/himtika/kabinet/gear.png',
+      'title': 'Gear',
+      'description':
+          'Melambangkan teknologi dan keberlanjutan yang dinamis dan terus bergerak membangun sumber daya mahasiswa yang kreatif, kompetitif, dan unggul',
+    },
+  ];
+
   void _initDataFromState(HimtikaManagementState state) {
     if (state.kabinet != null) {
       _namaKabinetController.text = state.kabinet!.namaKabinet;
@@ -105,6 +137,27 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         _nilaiTitleControllers.add(TextEditingController(text: item['title'] ?? ''));
         _nilaiDescControllers.add(TextEditingController(text: item['description'] ?? ''));
       }
+
+      for (var c in _maknaLogoTitleControllers) {
+        c.dispose();
+      }
+      for (var c in _maknaLogoDescControllers) {
+        c.dispose();
+      }
+      _maknaLogoTitleControllers.clear();
+      _maknaLogoDescControllers.clear();
+      _maknaLogoIconUrls.clear();
+      _maknaLogoSelectedFiles.clear();
+
+      final maknaListToUse = state.kabinet!.maknaLogo.isNotEmpty
+          ? state.kabinet!.maknaLogo
+          : defaultMaknaLogo;
+
+      for (var item in maknaListToUse) {
+        _maknaLogoTitleControllers.add(TextEditingController(text: item['title'] ?? ''));
+        _maknaLogoDescControllers.add(TextEditingController(text: item['description'] ?? ''));
+        _maknaLogoIconUrls.add(item['icon'] ?? '');
+      }
     } else {
       if (_namaKabinetController.text.isEmpty) {
         _namaKabinetController.text = 'SINERGIS';
@@ -124,6 +177,23 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         for (var item in defaultNilaiKabinet) {
           _nilaiTitleControllers.add(TextEditingController(text: item['title'] ?? ''));
           _nilaiDescControllers.add(TextEditingController(text: item['description'] ?? ''));
+        }
+
+        for (var c in _maknaLogoTitleControllers) {
+          c.dispose();
+        }
+        for (var c in _maknaLogoDescControllers) {
+          c.dispose();
+        }
+        _maknaLogoTitleControllers.clear();
+        _maknaLogoDescControllers.clear();
+        _maknaLogoIconUrls.clear();
+        _maknaLogoSelectedFiles.clear();
+
+        for (var item in defaultMaknaLogo) {
+          _maknaLogoTitleControllers.add(TextEditingController(text: item['title'] ?? ''));
+          _maknaLogoDescControllers.add(TextEditingController(text: item['description'] ?? ''));
+          _maknaLogoIconUrls.add(item['icon'] ?? '');
         }
       }
     }
@@ -162,6 +232,12 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
       c.dispose();
     }
     for (var c in _nilaiDescControllers) {
+      c.dispose();
+    }
+    for (var c in _maknaLogoTitleControllers) {
+      c.dispose();
+    }
+    for (var c in _maknaLogoDescControllers) {
       c.dispose();
     }
     super.dispose();
@@ -212,6 +288,49 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
     });
   }
 
+  Future<void> _pickMaknaLogoImage(int index) async {
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      setState(() {
+        _maknaLogoSelectedFiles[index] = File(picked.path);
+      });
+    }
+  }
+
+  void _addMaknaLogoField() {
+    setState(() {
+      _maknaLogoTitleControllers.add(TextEditingController());
+      _maknaLogoDescControllers.add(TextEditingController());
+      _maknaLogoIconUrls.add('');
+    });
+  }
+
+  void _removeMaknaLogoField(int index) {
+    setState(() {
+      _maknaLogoTitleControllers[index].dispose();
+      _maknaLogoTitleControllers.removeAt(index);
+      _maknaLogoDescControllers[index].dispose();
+      _maknaLogoDescControllers.removeAt(index);
+      if (index < _maknaLogoIconUrls.length) {
+        _maknaLogoIconUrls.removeAt(index);
+      }
+      _maknaLogoSelectedFiles.remove(index);
+      final newFiles = <int, File>{};
+      for (final entry in _maknaLogoSelectedFiles.entries) {
+        if (entry.key > index) {
+          newFiles[entry.key - 1] = entry.value;
+        } else if (entry.key < index) {
+          newFiles[entry.key] = entry.value;
+        }
+      }
+      _maknaLogoSelectedFiles.clear();
+      _maknaLogoSelectedFiles.addAll(newFiles);
+    });
+  }
+
   void _submitKabinet(HimtikaKabinet? currentKabinet) {
     if (_formKeyKabinet.currentState!.validate()) {
       final List<Map<String, String>> nilaiKabinet = [];
@@ -220,6 +339,23 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         final desc = _nilaiDescControllers[i].text.trim();
         if (title.isNotEmpty || desc.isNotEmpty) {
           nilaiKabinet.add({
+            'title': title,
+            'description': desc,
+          });
+        }
+      }
+
+      final List<Map<String, String>> maknaLogo = [];
+      for (int i = 0; i < _maknaLogoTitleControllers.length; i++) {
+        final title = _maknaLogoTitleControllers[i].text.trim();
+        final desc = _maknaLogoDescControllers[i].text.trim();
+        final icon = i < _maknaLogoIconUrls.length ? _maknaLogoIconUrls[i] : '';
+        if (title.isNotEmpty ||
+            desc.isNotEmpty ||
+            icon.isNotEmpty ||
+            _maknaLogoSelectedFiles.containsKey(i)) {
+          maknaLogo.add({
+            'icon': icon,
             'title': title,
             'description': desc,
           });
@@ -235,12 +371,14 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         periode: _periodeController.text.trim(),
         isActive: currentKabinet?.isActive ?? true,
         nilaiKabinet: nilaiKabinet,
+        maknaLogo: maknaLogo,
       );
 
       context.read<HimtikaManagementBloc>().add(
             UpdateKabinetEvent(
               kabinet: kabinet,
               logoFile: _selectedLogoFile,
+              maknaLogoFiles: _maknaLogoSelectedFiles,
             ),
           );
     }
@@ -484,10 +622,10 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                           itemBuilder: (context, index) {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
-                              color: Colors.blue.shade50.withValues(alpha: 0.5),
+                              color: const Color(0xFFE8F4FE),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(color: Colors.blue.shade200),
+                                side: const BorderSide(color: Color(0xFF90CAF9)),
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(12.0),
@@ -521,6 +659,10 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                                         labelText: 'Judul Nilai',
                                         hintText: 'Contoh: Sinergi / Amanah',
                                         isDense: true,
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: const BorderSide(color: Color(0xFF0175C8), width: 1.5),
+                                        ),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
                                         ),
@@ -537,6 +679,10 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                                         hintText: 'Penjelasan mengenai nilai ini...',
                                         alignLabelWithHint: true,
                                         isDense: true,
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: const BorderSide(color: Color(0xFF0175C8), width: 1.5),
+                                        ),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
                                         ),
@@ -548,6 +694,202 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                             );
                           },
                         ),
+                        const SizedBox(height: 20),
+
+                        // Dynamic Makna Logo Section
+                        const Divider(height: 30),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                'Makna Logo Kabinet',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E1E1E),
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: _addMaknaLogoField,
+                              icon: const Icon(Icons.add_circle, size: 18),
+                              label: const Text('Tambah Makna Logo'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        if (_maknaLogoTitleControllers.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: const Center(
+                              child: Text(
+                                'Belum ada makna logo kabinet. Klik "Tambah Makna Logo" untuk menambahkan.',
+                                style: TextStyle(color: Colors.black54, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _maknaLogoTitleControllers.length,
+                            itemBuilder: (context, index) {
+                              final hasSelectedFile = _maknaLogoSelectedFiles.containsKey(index);
+                              final currentUrl = index < _maknaLogoIconUrls.length ? _maknaLogoIconUrls[index] : '';
+
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                color: const Color(0xFFE8F4FE),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(color: Color(0xFF90CAF9)),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Makna Logo #${index + 1}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0175C8),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.redAccent,
+                                              size: 20,
+                                            ),
+                                            onPressed: () => _removeMaknaLogoField(index),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 4),
+
+                                      // Gambar Logo Picker & Preview
+                                      Center(
+                                        child: Column(
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () => _pickMaknaLogoImage(index),
+                                              child: Container(
+                                                width: 140,
+                                                height: 80,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  border: Border.all(color: const Color(0xFF90CAF9)),
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  child: hasSelectedFile
+                                                      ? Image.file(
+                                                          _maknaLogoSelectedFiles[index]!,
+                                                          fit: BoxFit.contain,
+                                                        )
+                                                      : currentUrl.isNotEmpty
+                                                          ? currentUrl.startsWith('http://') || currentUrl.startsWith('https://')
+                                                              ? Image.network(
+                                                                  currentUrl,
+                                                                  fit: BoxFit.contain,
+                                                                  errorBuilder: (_, __, ___) => const Icon(
+                                                                    Icons.broken_image,
+                                                                    color: Colors.grey,
+                                                                    size: 36,
+                                                                  ),
+                                                                )
+                                                              : Image.asset(
+                                                                  currentUrl,
+                                                                  fit: BoxFit.contain,
+                                                                  errorBuilder: (_, __, ___) => const Icon(
+                                                                    Icons.image_outlined,
+                                                                    color: Colors.grey,
+                                                                    size: 36,
+                                                                  ),
+                                                                )
+                                                          : const Column(
+                                                              mainAxisAlignment: MainAxisAlignment.center,
+                                                              children: [
+                                                                Icon(Icons.add_photo_alternate_outlined, color: Colors.grey, size: 28),
+                                                                SizedBox(height: 4),
+                                                                Text('Upload Gambar', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                                                              ],
+                                                            ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            TextButton.icon(
+                                              onPressed: () => _pickMaknaLogoImage(index),
+                                              icon: const Icon(Icons.photo_library, size: 14),
+                                              label: Text(
+                                                hasSelectedFile || currentUrl.isNotEmpty ? 'Ganti Gambar' : 'Pilih Gambar',
+                                                style: const TextStyle(fontSize: 12),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                       // Judul / Nama Elemen Logo
+                                      TextFormField(
+                                        controller: _maknaLogoTitleControllers[index],
+                                        decoration: InputDecoration(
+                                          labelText: 'Nama Elemen Logo',
+                                          hintText: 'Contoh: Angsa / Bunga Teratai',
+                                          isDense: true,
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: const BorderSide(color: Color(0xFF0175C8), width: 1.5),
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+
+                                      // Deskripsi Makna Logo
+                                      TextFormField(
+                                        controller: _maknaLogoDescControllers[index],
+                                        minLines: 2,
+                                        maxLines: null,
+                                        keyboardType: TextInputType.multiline,
+                                        decoration: InputDecoration(
+                                          labelText: 'Deskripsi Makna Logo',
+                                          hintText: 'Penjelasan filosofi elemen logo ini...',
+                                          alignLabelWithHint: true,
+                                          isDense: true,
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: const BorderSide(color: Color(0xFF0175C8), width: 1.5),
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         const SizedBox(height: 20),
 
                         // Save Kabinet Button

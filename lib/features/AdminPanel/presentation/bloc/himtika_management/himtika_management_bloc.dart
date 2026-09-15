@@ -81,7 +81,29 @@ class HimtikaManagementBloc
         );
       }
 
-      final updatedKabinet = event.kabinet.copyWith(logoUrl: logoUrl);
+      List<Map<String, String>> updatedMaknaLogo = List.from(event.kabinet.maknaLogo);
+      if (event.maknaLogoFiles != null && event.maknaLogoFiles!.isNotEmpty) {
+        for (final entry in event.maknaLogoFiles!.entries) {
+          final index = entry.key;
+          final file = entry.value;
+          if (index >= 0 && index < updatedMaknaLogo.length) {
+            final uploadedUrl = await _repository.uploadImage(
+              file: file,
+              bucketName: 'himtika-assets',
+              pathPrefix: 'makna_logo',
+            );
+            updatedMaknaLogo[index] = {
+              ...updatedMaknaLogo[index],
+              'icon': uploadedUrl,
+            };
+          }
+        }
+      }
+
+      final updatedKabinet = event.kabinet.copyWith(
+        logoUrl: logoUrl,
+        maknaLogo: updatedMaknaLogo,
+      );
       await _repository.updateKabinet(updatedKabinet);
       final refreshedKabinet = await _repository.getActiveKabinet();
 

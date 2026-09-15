@@ -53,29 +53,7 @@ class KabinetBloc extends Bloc<KabinetEvent, KabinetState> {
       },
     ];
 
-    try {
-      if (repository != null) {
-        final activeKabinet = await repository!.getActiveKabinet();
-        if (activeKabinet != null) {
-          if (activeKabinet.namaKabinet.isNotEmpty) {
-            namaKabinet = activeKabinet.namaKabinet;
-          }
-          if (activeKabinet.logoUrl != null && activeKabinet.logoUrl!.isNotEmpty) {
-            heroLogoPath = activeKabinet.logoUrl!;
-          }
-          if (activeKabinet.deskripsi != null && activeKabinet.deskripsi!.isNotEmpty) {
-            aboutSinergis = activeKabinet.deskripsi!;
-          }
-          if (activeKabinet.nilaiKabinet.isNotEmpty) {
-            kabinetCards = activeKabinet.nilaiKabinet;
-          }
-        }
-      }
-    } catch (_) {
-      // Fallback to initial dummy data on error
-    }
-
-    const logoMeanings = [
+    List<Map<String, String>> logoMeanings = [
       {
         'icon': 'src/features/himtika/kabinet/angsa.png',
         'title': 'Angsa',
@@ -97,6 +75,31 @@ class KabinetBloc extends Bloc<KabinetEvent, KabinetState> {
         'description': 'Melambangkan teknologi dan keberlanjutan yang dinamis dan terus bergerak membangun sumber daya mahasiswa yang kreatif, kompetitif, dan unggul'
       },
     ];
+
+    try {
+      if (repository != null) {
+        final activeKabinet = await repository!.getActiveKabinet();
+        if (activeKabinet != null) {
+          if (activeKabinet.namaKabinet.isNotEmpty) {
+            namaKabinet = activeKabinet.namaKabinet;
+          }
+          if (activeKabinet.logoUrl != null && activeKabinet.logoUrl!.isNotEmpty) {
+            heroLogoPath = activeKabinet.logoUrl!;
+          }
+          if (activeKabinet.deskripsi != null && activeKabinet.deskripsi!.isNotEmpty) {
+            aboutSinergis = activeKabinet.deskripsi!;
+          }
+          if (activeKabinet.nilaiKabinet.isNotEmpty) {
+            kabinetCards = activeKabinet.nilaiKabinet;
+          }
+          if (activeKabinet.maknaLogo.isNotEmpty) {
+            logoMeanings = activeKabinet.maknaLogo;
+          }
+        }
+      }
+    } catch (_) {
+      // Fallback to initial dummy data on error
+    }
 
     emit(state.copyWith(
       status: KabinetStatus.success,

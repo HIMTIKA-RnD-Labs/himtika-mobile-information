@@ -221,21 +221,32 @@ class KabinetScreen extends StatelessWidget {
           const Text('Makna Logo Kabinet',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          ListView.separated(
-            padding: EdgeInsets.zero,
-            itemCount: state.logoMeanings.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index) {
-              final logo = state.logoMeanings[index];
-              return _buildLogoMeaningRow(
-                logo['icon']!,
-                logo['title']!,
-                logo['description']!,
-              );
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-          ),
+          if (state.logoMeanings.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Belum ada makna logo kabinet.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: state.logoMeanings.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                final logo = state.logoMeanings[index];
+                return _buildLogoMeaningRow(
+                  logo['icon'] ?? '',
+                  logo['title'] ?? '',
+                  logo['description'] ?? '',
+                );
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
+            ),
           const SizedBox(height: 24),
 
           _buildSejarahCard(context),
@@ -318,12 +329,31 @@ class KabinetScreen extends StatelessWidget {
         crossAxisAlignment:
             CrossAxisAlignment.center,
         children: [
-          Image.asset(
-            iconPath,
-            width: 200,
-            height: 100,
-            fit: BoxFit.contain,
-          ),
+          iconPath.startsWith('http://') || iconPath.startsWith('https://')
+              ? Image.network(
+                  iconPath,
+                  width: 200,
+                  height: 100,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image,
+                    size: 60,
+                    color: Colors.grey,
+                  ),
+                )
+              : iconPath.isNotEmpty
+                  ? Image.asset(
+                      iconPath,
+                      width: 200,
+                      height: 100,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.image_not_supported,
+                        size: 60,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : const SizedBox(height: 20),
 
           const SizedBox(height: 12),
           Text(

@@ -19,14 +19,16 @@ class FetchHimtikaAdminData extends HimtikaManagementEvent {
 class UpdateKabinetEvent extends HimtikaManagementEvent {
   final HimtikaKabinet kabinet;
   final File? logoFile;
+  final Map<int, File>? maknaLogoFiles;
 
   const UpdateKabinetEvent({
     required this.kabinet,
     this.logoFile,
+    this.maknaLogoFiles,
   });
 
   @override
-  List<Object?> get props => [kabinet, logoFile];
+  List<Object?> get props => [kabinet, logoFile, maknaLogoFiles];
 }
 
 class UpdateAboutEvent extends HimtikaManagementEvent {

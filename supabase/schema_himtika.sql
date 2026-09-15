@@ -7,11 +7,13 @@ CREATE TABLE IF NOT EXISTS public.himtika_kabinet (
     periode VARCHAR(20) NOT NULL, -- Contoh: "2024/2025"
     is_active BOOLEAN DEFAULT true,
     nilai_kabinet JSONB DEFAULT '[]'::jsonb, -- Array object [{title: "...", description: "..."}]
+    makna_logo JSONB DEFAULT '[]'::jsonb, -- Array object [{icon: "...", title: "...", description: "..."}]
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
 -- Migration jika tabel sudah ada sebelumnya:
 ALTER TABLE public.himtika_kabinet ADD COLUMN IF NOT EXISTS nilai_kabinet JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.himtika_kabinet ADD COLUMN IF NOT EXISTS makna_logo JSONB DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS public.himtika_about (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
