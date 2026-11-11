@@ -7,7 +7,6 @@ import 'package:himtika_mobile_information/features/AdminPanel/presentation/page
 import 'package:himtika_mobile_information/features/AdminPanel/presentation/pages/kontakdosen.dart';
 import 'package:himtika_mobile_information/features/AdminPanel/presentation/pages/roles.dart';
 import 'package:himtika_mobile_information/features/auth/application/auth_controller.dart';
-import 'package:himtika_mobile_information/features/home/presentation/pages/home.dart';
 import 'package:himtika_mobile_information/features/AdminPanel/presentation/pages/hicode/hicode_admin_home_screen.dart';
 import 'package:himtika_mobile_information/features/AdminPanel/presentation/pages/himtika/himtika_admin_home_screen.dart';
 
@@ -158,10 +157,8 @@ class Sidebar extends StatelessWidget {
                         leading: const Icon(Icons.logout, color: Colors.redAccent),
                         title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const HomePage()),
-                          );
+                          Navigator.pop(context);
+                          authController.signOut();
                         },
                       ),
                     ],
