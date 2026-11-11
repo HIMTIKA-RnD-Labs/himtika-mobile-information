@@ -34,13 +34,12 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       if (user != null) {
         // Simpan atau hapus kredensial berdasarkan pilihan "Remember Me"
         final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('password'); // Hapus password tersimpan demi keamanan
         if (event.rememberMe) {
           await prefs.setString('email', event.email);
-          await prefs.setString('password', event.password);
           await prefs.setBool('rememberMe', true);
         } else {
           await prefs.remove('email');
-          await prefs.remove('password');
           await prefs.setBool('rememberMe', false);
         }
         emit(LoginSuccess());
@@ -95,12 +94,15 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
   Future<void> _onLoadRememberMeData(LoadRememberMeData event, Emitter<LoginState> emit) async {
     final prefs = await SharedPreferences.getInstance();
+    // Bersihkan password legacy jika pernah tersimpan di versi terdahulu
+    if (prefs.containsKey('password')) {
+      await prefs.remove('password');
+    }
     final email = prefs.getString('email');
-    final password = prefs.getString('password');
     final rememberMe = prefs.getBool('rememberMe') ?? false;
 
-    if (rememberMe && email != null && password != null) {
-      emit(LoginInitial(email: email, password: password, rememberMe: rememberMe));
+    if (rememberMe && email != null) {
+      emit(LoginInitial(email: email, rememberMe: rememberMe));
     }
   }
 }
