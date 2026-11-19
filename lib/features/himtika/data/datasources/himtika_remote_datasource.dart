@@ -80,13 +80,32 @@ class HimtikaRemoteDataSourceImpl implements HimtikaRemoteDataSource {
     }
   }
 
+  static const List<Map<String, dynamic>> _seedDivisions = [
+    {'nama_divisi': 'Steering Committee', 'urutan': 0},
+    {'nama_divisi': 'Divisi Internal', 'urutan': 1},
+    {'nama_divisi': 'Divisi RnD', 'urutan': 2},
+    {'nama_divisi': 'Divisi Relasi', 'urutan': 3},
+    {'nama_divisi': 'Divisi Edukasi', 'urutan': 4},
+    {'nama_divisi': 'Divisi Infokom', 'urutan': 5},
+  ];
+
   @override
   Future<List<HimtikaDivisiModel>> getDivisiList() async {
     final response = await SupabaseTableHelper.table('himtika_divisi')
         .select()
         .order('urutan', ascending: true);
 
-    final list = response as List<dynamic>;
+    var list = response as List<dynamic>;
+    if (list.isEmpty) {
+      try {
+        final inserted = await SupabaseTableHelper.table('himtika_divisi')
+            .insert(_seedDivisions)
+            .select();
+        list = inserted as List<dynamic>;
+      } catch (_) {
+        // Fallback jika permission atau offline
+      }
+    }
     return list.map((e) => HimtikaDivisiModel.fromJson(e)).toList();
   }
 

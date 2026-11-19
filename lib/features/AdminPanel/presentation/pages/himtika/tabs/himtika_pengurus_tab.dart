@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:himtika_mobile_information/features/himtika/data/datasources/himtika_default_structure.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_pengurus.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_divisi.dart';
 import 'package:himtika_mobile_information/features/AdminPanel/presentation/bloc/himtika_management/himtika_management_bloc.dart';
@@ -17,38 +18,226 @@ class HimtikaPengurusTab extends StatefulWidget {
 
 class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
   final ImagePicker _picker = ImagePicker();
+  String _selectedDivision = HimtikaDefaultStructure.divisionNames.first;
 
-  void _showPengurusDialog(
-    BuildContext context,
-    HimtikaManagementState state, {
-    HimtikaPengurus? pengurus,
+  HimtikaDivisi _findDivisi(HimtikaManagementState state, String divisionName) {
+    final cleanTarget =
+        divisionName.toLowerCase().replaceAll('divisi ', '').trim();
+    return state.divisiList.firstWhere(
+      (d) =>
+          d.namaDivisi.toLowerCase().replaceAll('divisi ', '').trim() ==
+          cleanTarget,
+      orElse: () => state.divisiList.isNotEmpty
+          ? state.divisiList.first
+          : HimtikaDivisi(
+              id: '',
+              namaDivisi: divisionName,
+              urutan: 0,
+            ),
+    );
+  }
+
+  void _showEditFotoDialog(
+    BuildContext context, {
+    required DefaultMember defaultMember,
+    required HimtikaPengurus? customPengurus,
+    required String divisiId,
   }) {
     final bloc = context.read<HimtikaManagementBloc>();
-    if (state.divisiList.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Silakan buat Divisi terlebih dahulu sebelum menambah pengurus!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
     final formKey = GlobalKey<FormState>();
-    final namaController = TextEditingController(text: pengurus?.nama ?? '');
-    final jabatanController = TextEditingController(text: pengurus?.jabatan ?? '');
-    final urutanController = TextEditingController(text: (pengurus?.urutan ?? 0).toString());
+    final namaController = TextEditingController(
+      text: customPengurus?.nama ?? defaultMember.name,
+    );
+    final jabatanController = TextEditingController(
+      text: customPengurus?.jabatan ?? defaultMember.position,
+    );
 
-    String selectedDivisiId = pengurus?.divisiId ??
-        (state.selectedDivisiId != null && state.selectedDivisiId!.isNotEmpty
-            ? state.selectedDivisiId!
-            : state.divisiList.first.id);
+    File? selectedFotoFile;
 
-    // Guard: Pastikan selectedDivisiId benar-benar ada di daftar divisi saat ini
-    if (!state.divisiList.any((d) => d.id == selectedDivisiId)) {
-      selectedDivisiId = state.divisiList.first.id;
-    }
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogInnerContext, setDialogState) {
+            Future<void> pickFoto() async {
+              final XFile? picked = await _picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 85,
+              );
+              if (picked != null) {
+                setDialogState(() {
+                  selectedFotoFile = File(picked.path);
+                });
+              }
+            }
 
+            final bool hasNetwork = customPengurus?.fotoUrl != null &&
+                customPengurus!.fotoUrl!.isNotEmpty;
+
+            ImageProvider imageProvider;
+            if (selectedFotoFile != null) {
+              imageProvider = FileImage(selectedFotoFile!);
+            } else if (hasNetwork) {
+              imageProvider = NetworkImage(customPengurus.fotoUrl!);
+            } else {
+              imageProvider = AssetImage(defaultMember.defaultAsset);
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Icons.camera_alt, color: Color(0xFF0175C8)),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Ubah Foto Pengurus',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Preview Avatar
+                      GestureDetector(
+                        onTap: pickFoto,
+                        child: Stack(
+                          children: [
+                            CircleAvatar(
+                              radius: 46,
+                              backgroundColor: const Color(0xFF0175C8)
+                                  .withValues(alpha: 0.1),
+                              backgroundImage: imageProvider,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: CircleAvatar(
+                                radius: 15,
+                                backgroundColor: const Color(0xFF0175C8),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: pickFoto,
+                        icon: const Icon(Icons.photo_library, size: 16),
+                        label: const Text('Pilih dari Galeri'),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Nama Pengurus
+                      TextFormField(
+                        controller: namaController,
+                        decoration: InputDecoration(
+                          labelText: 'Nama Pengurus *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Nama wajib diisi'
+                                : null,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Jabatan (Read-only / info)
+                      TextFormField(
+                        controller: jabatanController,
+                        decoration: InputDecoration(
+                          labelText: 'Jabatan (Posisi Resmi)',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Jabatan wajib diisi'
+                                : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0175C8),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      if (customPengurus == null) {
+                        final newPengurus = HimtikaPengurus(
+                          id: '',
+                          divisiId: divisiId,
+                          nama: namaController.text.trim(),
+                          jabatan: jabatanController.text.trim(),
+                          urutan: defaultMember.urutan,
+                        );
+                        bloc.add(CreatePengurusEvent(
+                          pengurus: newPengurus,
+                          fotoFile: selectedFotoFile,
+                        ));
+                      } else {
+                        final updated = customPengurus.copyWith(
+                          nama: namaController.text.trim(),
+                          jabatan: jabatanController.text.trim(),
+                        );
+                        bloc.add(UpdatePengurusEvent(
+                          pengurus: updated,
+                          fotoFile: selectedFotoFile,
+                        ));
+                      }
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddCustomPengurusDialog(
+    BuildContext context, {
+    required String divisiId,
+  }) {
+    final bloc = context.read<HimtikaManagementBloc>();
+    final formKey = GlobalKey<FormState>();
+    final namaController = TextEditingController();
+    final jabatanController = TextEditingController();
     File? selectedFotoFile;
 
     showDialog(
@@ -73,20 +262,13 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              title: Row(
+              title: const Row(
                 children: [
-                  Icon(
-                    pengurus == null ? Icons.person_add : Icons.edit,
-                    color: const Color(0xFF0175C8),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      pengurus == null ? 'Tambah Pengurus' : 'Edit Pengurus',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                  Icon(Icons.person_add, color: Color(0xFF0175C8)),
+                  SizedBox(width: 8),
+                  Text('Tambah Anggota Baru',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
               content: SingleChildScrollView(
@@ -95,102 +277,54 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Upload Photo Avatar
-                      Builder(builder: (context) {
-                        final imageProvider = selectedFotoFile != null
-                            ? FileImage(selectedFotoFile!)
-                            : (pengurus?.fotoUrl != null && pengurus!.fotoUrl!.isNotEmpty
-                                ? NetworkImage(pengurus.fotoUrl!) as ImageProvider
-                                : null);
-                        return GestureDetector(
-                          onTap: pickFoto,
-                          child: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 42,
-                                backgroundColor: const Color(0xFF0175C8).withValues(alpha: 0.1),
-                                backgroundImage: imageProvider,
-                                onBackgroundImageError: imageProvider != null ? (_, __) {} : null,
-                                child: (selectedFotoFile == null &&
-                                        (pengurus?.fotoUrl == null || pengurus!.fotoUrl!.isEmpty))
-                                    ? const Icon(Icons.person, size: 48, color: Color(0xFF0175C8))
-                                    : null,
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: const Color(0xFF0175C8),
-                                  child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 16),
-
-                      // Nama Pengurus
+                      GestureDetector(
+                        onTap: pickFoto,
+                        child: CircleAvatar(
+                          radius: 40,
+                          backgroundColor:
+                              const Color(0xFF0175C8).withValues(alpha: 0.1),
+                          backgroundImage: selectedFotoFile != null
+                              ? FileImage(selectedFotoFile!)
+                              : null,
+                          child: selectedFotoFile == null
+                              ? const Icon(Icons.camera_alt,
+                                  size: 32, color: Color(0xFF0175C8))
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: pickFoto,
+                        icon: const Icon(Icons.photo_library, size: 16),
+                        label: const Text('Pilih Foto'),
+                      ),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: namaController,
                         decoration: InputDecoration(
-                          labelText: 'Nama Lengkap *',
-                          hintText: 'Contoh: Ahmad Fajar',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          labelText: 'Nama Pengurus *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         validator: (value) =>
-                            value == null || value.trim().isEmpty ? 'Nama wajib diisi' : null,
+                            value == null || value.trim().isEmpty
+                                ? 'Nama wajib diisi'
+                                : null,
                       ),
                       const SizedBox(height: 12),
-
-                      // Jabatan
                       TextFormField(
                         controller: jabatanController,
                         decoration: InputDecoration(
-                          labelText: 'Jabatan *',
-                          hintText: 'Contoh: Ketua Divisi / Anggota',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          labelText: 'Jabatan (Contoh: Anggota Dept. HRD) *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         validator: (value) =>
-                            value == null || value.trim().isEmpty ? 'Jabatan wajib diisi' : null,
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Dropdown Pilih Divisi
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedDivisiId,
-                        decoration: InputDecoration(
-                          labelText: 'Divisi *',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        validator: (val) =>
-                            val == null || val.isEmpty ? 'Divisi wajib dipilih' : null,
-                        items: state.divisiList.map((divisi) {
-                          return DropdownMenuItem<String>(
-                            value: divisi.id,
-                            child: Text(divisi.namaDivisi),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() {
-                              selectedDivisiId = val;
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Urutan
-                      TextFormField(
-                        controller: urutanController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Urutan Tampil',
-                          hintText: '0, 1, 2...',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
+                            value == null || value.trim().isEmpty
+                                ? 'Jabatan wajib diisi'
+                                : null,
                       ),
                     ],
                   ),
@@ -199,46 +333,34 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.grey)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0175C8),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
-                      final int urutanVal = int.tryParse(urutanController.text.trim()) ?? 0;
-                      if (pengurus == null) {
-                        final newPengurus = HimtikaPengurus(
-                          id: '',
-                          divisiId: selectedDivisiId,
-                          nama: namaController.text.trim(),
-                          jabatan: jabatanController.text.trim(),
-                          urutan: urutanVal,
-                        );
-                        bloc.add(
-                          CreatePengurusEvent(pengurus: newPengurus, fotoFile: selectedFotoFile),
-                        );
-                      } else {
-                        final updatedPengurus = pengurus.copyWith(
-                          divisiId: selectedDivisiId,
-                          nama: namaController.text.trim(),
-                          jabatan: jabatanController.text.trim(),
-                          urutan: urutanVal,
-                        );
-                        bloc.add(
-                          UpdatePengurusEvent(
-                            pengurus: updatedPengurus,
-                            fotoFile: selectedFotoFile,
-                          ),
-                        );
-                      }
+                      final newPengurus = HimtikaPengurus(
+                        id: '',
+                        divisiId: divisiId,
+                        nama: namaController.text.trim(),
+                        jabatan: jabatanController.text.trim(),
+                        urutan: 99,
+                      );
+                      bloc.add(CreatePengurusEvent(
+                        pengurus: newPengurus,
+                        fotoFile: selectedFotoFile,
+                      ));
                       Navigator.pop(dialogContext);
                     }
                   },
-                  child: Text(pengurus == null ? 'Simpan' : 'Update'),
+                  child: const Text('Simpan'),
                 ),
               ],
             );
@@ -248,33 +370,34 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
     );
   }
 
-  void _confirmDeletePengurus(BuildContext context, HimtikaPengurus pengurus) {
-    final bloc = context.read<HimtikaManagementBloc>();
+  void _confirmReset(BuildContext context, HimtikaPengurus pengurus) {
     showDialog(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Konfirmasi Hapus'),
-          content: Text('Apakah Anda yakin ingin menghapus data pengurus "${pengurus.nama}"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Batal'),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kembalikan ke Foto Bawaan?'),
+        content: Text(
+          'Foto kustom untuk ${pengurus.nama} (${pengurus.jabatan}) akan dihapus dan kembali menggunakan foto bawaan resmi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                bloc.add(DeletePengurusEvent(pengurusId: pengurus.id));
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Hapus'),
-            ),
-          ],
-        );
-      },
+            onPressed: () {
+              Navigator.pop(ctx);
+              context
+                  .read<HimtikaManagementBloc>()
+                  .add(DeletePengurusEvent(pengurusId: pengurus.id));
+            },
+            child: const Text('Kembalikan'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -282,212 +405,268 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
   Widget build(BuildContext context) {
     return BlocBuilder<HimtikaManagementBloc, HimtikaManagementState>(
       builder: (context, state) {
-        final filteredList = state.filteredPengurusList;
+        final currentDivisi = _findDivisi(context.read<HimtikaManagementBloc>().state, _selectedDivision);
+        final defaultMembers =
+            HimtikaDefaultStructure.getMembersByDivision(_selectedDivision);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Filter & Add Button Bar
-              Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Column(
-                    children: [
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+        return RefreshIndicator(
+          onRefresh: () async {
+            context
+                .read<HimtikaManagementBloc>()
+                .add(const FetchHimtikaAdminData());
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header & Division Selector
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pilih Divisi:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xFF0175C8),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedDivision,
+                              isExpanded: true,
+                              items: HimtikaDefaultStructure.divisionNames
+                                  .map((name) {
+                                return DropdownMenuItem<String>(
+                                  value: name,
+                                  child: Text(
+                                    name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _selectedDivision = val;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0175C8)
+                                .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
                             children: [
-                              const Icon(Icons.people_alt, color: Color(0xFF0175C8)),
+                              const Icon(Icons.info_outline,
+                                  size: 20, color: Color(0xFF0175C8)),
                               const SizedBox(width: 8),
-                              Text(
-                                'Pengurus (${filteredList.length})',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                              Expanded(
+                                child: Text(
+                                  'Klik "Ganti Foto" pada anggota untuk mengunggah foto baru. Tata letak dan deskripsi divisi tetap terjaga rapi.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade800,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          ElevatedButton.icon(
-                            onPressed: () => _showPengurusDialog(context, state),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0175C8),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Tambah Pengurus'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Filter Dropdown
-                      Row(
-                        children: [
-                          const Text(
-                            'Filter Divisi:',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade300),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String?>(
-                                  value: (state.selectedDivisiId != null &&
-                                          state.divisiList.any((d) => d.id == state.selectedDivisiId))
-                                      ? state.selectedDivisiId
-                                      : null,
-                                  isExpanded: true,
-                                  hint: const Text('Semua Divisi'),
-                                  items: [
-                                    const DropdownMenuItem<String?>(
-                                      value: null,
-                                      child: Text('Semua Divisi'),
-                                    ),
-                                    ...state.divisiList.map((divisi) {
-                                      return DropdownMenuItem<String?>(
-                                        value: divisi.id,
-                                        child: Text(divisi.namaDivisi),
-                                      );
-                                    }),
-                                  ],
-                                  onChanged: (val) {
-                                    context.read<HimtikaManagementBloc>().add(
-                                          SelectDivisiFilterEvent(divisiId: val),
-                                        );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 16),
 
-              if (filteredList.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(32),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.person_off_outlined, size: 48, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text(
-                        'Belum ada data pengurus di divisi ini',
-                        style: TextStyle(color: Colors.grey),
+                // Subheader
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Daftar Anggota (${defaultMembers.length})',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                )
-              else
-                ListView.builder(
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _showAddCustomPengurusDialog(
+                        context,
+                        divisiId: currentDivisi.id,
+                      ),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('Tambah Anggota',
+                          style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Members List
+                ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredList.length,
+                  itemCount: defaultMembers.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final pengurus = filteredList[index];
-                    final String namaDivisi = state.divisiList
-                        .firstWhere(
-                          (d) => d.id == pengurus.divisiId,
-                          orElse: () => const HimtikaDivisi(
-                            id: '',
-                            namaDivisi: 'Umum',
-                            urutan: 0,
-                          ),
-                        )
-                        .namaDivisi;
+                    final member = defaultMembers[index];
+
+                    // Cari apakah pengurus ini sudah diupdate di Supabase
+                    HimtikaPengurus? custom = state.pengurusList.where((p) {
+                      final sameJabatan = p.jabatan.trim().toLowerCase() ==
+                          member.position.trim().toLowerCase();
+                      return sameJabatan;
+                    }).firstOrNull;
+
+                    if (custom == null) {
+                      custom = state.pengurusList.where((p) {
+                        return p.nama.trim().toLowerCase() ==
+                            member.name.trim().toLowerCase();
+                      }).firstOrNull;
+                    }
+
+                    final bool isCustom = custom?.fotoUrl != null &&
+                        custom!.fotoUrl!.isNotEmpty;
+                    final displayName = custom?.nama ?? member.name;
+
+                    ImageProvider imageProvider;
+                    if (isCustom) {
+                      imageProvider = NetworkImage(custom!.fotoUrl!);
+                    } else {
+                      imageProvider = AssetImage(member.defaultAsset);
+                    }
 
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
+                      elevation: 1.5,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: ListTile(
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: Builder(builder: (context) {
-                          final hasImage = pengurus.fotoUrl != null && pengurus.fotoUrl!.isNotEmpty;
-                          return CircleAvatar(
-                            radius: 24,
-                            backgroundColor: const Color(0xFF0175C8).withValues(alpha: 0.1),
-                            backgroundImage: hasImage ? NetworkImage(pengurus.fotoUrl!) : null,
-                            onBackgroundImageError: hasImage ? (_, __) {} : null,
-                            child: !hasImage
-                                ? const Icon(Icons.person, color: Color(0xFF0175C8))
-                                : null,
-                          );
-                        }),
-                        title: Text(
-                          pengurus.nama,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
                           children: [
-                            const SizedBox(height: 2),
-                            Text(
-                              pengurus.jabatan,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Color(0xFF0175C8),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                            // Avatar
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image(
+                                image: imageProvider,
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 56,
+                                  height: 56,
+                                  color: Colors.grey.shade300,
+                                  child: const Icon(Icons.person,
+                                      color: Colors.grey),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Divisi: $namaDivisi • Urutan: ${pengurus.urutan}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 12,
+                            const SizedBox(width: 12),
+
+                            // Jabatan & Nama
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    member.position,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF0175C8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    displayName,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isCustom
+                                          ? Colors.green.shade50
+                                          : Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: isCustom
+                                            ? Colors.green.shade300
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      isCustom ? 'Foto Kustom' : 'Foto Bawaan',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isCustom
+                                            ? Colors.green.shade700
+                                            : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Color(0xFF0175C8)),
-                              onPressed: () => _showPengurusDialog(
-                                context,
-                                state,
-                                pengurus: pengurus,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                              onPressed: () => _confirmDeletePengurus(context, pengurus),
+
+                            // Actions
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Ganti Foto',
+                                  icon: const Icon(Icons.camera_alt_outlined,
+                                      color: Color(0xFF0175C8)),
+                                  onPressed: () => _showEditFotoDialog(
+                                    context,
+                                    defaultMember: member,
+                                    customPengurus: custom,
+                                    divisiId: currentDivisi.id,
+                                  ),
+                                ),
+                                if (isCustom)
+                                  IconButton(
+                                    tooltip: 'Kembalikan ke Foto Bawaan',
+                                    icon: const Icon(Icons.restore,
+                                        color: Colors.orange),
+                                    onPressed: () =>
+                                        _confirmReset(context, custom!),
+                                  ),
+                              ],
                             ),
                           ],
                         ),
@@ -495,7 +674,8 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                     );
                   },
                 ),
-            ],
+              ],
+            ),
           ),
         );
       },

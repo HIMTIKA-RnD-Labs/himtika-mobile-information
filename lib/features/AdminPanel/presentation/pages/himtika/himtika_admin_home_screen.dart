@@ -27,7 +27,7 @@ class _HimtikaAdminHomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         drawer: const Sidebar(),
         appBar: AppBar(
@@ -38,27 +38,19 @@ class _HimtikaAdminHomeView extends StatelessWidget {
             'Kelola HIMTIKA',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          bottom: TabBar(
-            isScrollable: MediaQuery.of(context).size.width < 400,
-            tabAlignment: MediaQuery.of(context).size.width < 400
-                ? TabAlignment.start
-                : TabAlignment.fill,
+          bottom: const TabBar(
             indicatorColor: Colors.white,
             indicatorWeight: 3,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
-            tabs: const [
+            tabs: [
               Tab(
                 icon: Icon(Icons.account_balance, size: 20),
                 text: 'Kabinet & Profil',
               ),
               Tab(
-                icon: Icon(Icons.diversity_3, size: 20),
-                text: 'Kelola Divisi',
-              ),
-              Tab(
                 icon: Icon(Icons.people_alt, size: 20),
-                text: 'Kelola Pengurus',
+                text: 'Foto Pengurus',
               ),
             ],
           ),
@@ -136,7 +128,6 @@ class _HimtikaAdminHomeView extends StatelessWidget {
               return const TabBarView(
                 children: [
                   HimtikaKabinetAboutTab(),
-                  HimtikaDivisiTab(),
                   HimtikaPengurusTab(),
                 ],
               );

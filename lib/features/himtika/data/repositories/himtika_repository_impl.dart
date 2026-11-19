@@ -53,7 +53,8 @@ class HimtikaRepositoryImpl implements HimtikaRepository {
 
   @override
   Future<List<HimtikaDivisi>> getDivisiList() async {
-    return await remoteDataSource.getDivisiList();
+    final list = await remoteDataSource.getDivisiList();
+    return List<HimtikaDivisi>.from(list);
   }
 
   @override
@@ -87,12 +88,14 @@ class HimtikaRepositoryImpl implements HimtikaRepository {
 
   @override
   Future<List<HimtikaPengurus>> getPengurusByDivisi(String divisiId) async {
-    return await remoteDataSource.getPengurusByDivisi(divisiId);
+    final list = await remoteDataSource.getPengurusByDivisi(divisiId);
+    return List<HimtikaPengurus>.from(list);
   }
 
   @override
   Future<List<HimtikaPengurus>> getAllPengurus() async {
-    return await remoteDataSource.getAllPengurus();
+    final list = await remoteDataSource.getAllPengurus();
+    return List<HimtikaPengurus>.from(list);
   }
 
   @override

@@ -6,19 +6,17 @@ import 'package:himtika_mobile_information/features/himtika/presentation/bloc/di
 
 class DivisiDetailScreen extends StatelessWidget {
   final String divisiId;
-  final String? divisiTitle;
 
   const DivisiDetailScreen({
     super.key,
     required this.divisiId,
-    this.divisiTitle,
   });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => sl<DivisiDetailBloc>()
-        ..add(FetchDivisiData(divisiId: divisiId, divisiTitle: divisiTitle)),
+        ..add(FetchDivisiData(divisiId: divisiId)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         body: SafeArea(
@@ -214,16 +212,11 @@ class DivisiDetailScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Judul Section (Hanya tampil jika BUKAN SC)
-              if (state.title != 'Steering' &&
-                  divisiId != 'Steering Committee' &&
-                  divisiTitle != 'Steering Committee')
+              if (divisiId != 'Steering Committee')
                 Text('Departemen di ${state.title!}',
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
-              if (state.title != 'Steering' &&
-                  divisiId != 'Steering Committee' &&
-                  divisiTitle != 'Steering Committee')
-                const SizedBox(height: 16),
+              if (divisiId != 'Steering Committee') const SizedBox(height: 16),
 
               // ListView untuk 'departments'
               ListView.separated(
