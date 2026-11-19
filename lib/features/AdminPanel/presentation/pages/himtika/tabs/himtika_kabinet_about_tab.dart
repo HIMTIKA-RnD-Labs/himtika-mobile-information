@@ -25,7 +25,6 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
   late TextEditingController _periodeController;
 
   late TextEditingController _visiController;
-  late TextEditingController _sejarahController;
   final List<TextEditingController> _misiControllers = [];
 
   final List<TextEditingController> _nilaiTitleControllers = [];
@@ -48,7 +47,6 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
     _periodeController = TextEditingController();
 
     _visiController = TextEditingController();
-    _sejarahController = TextEditingController();
 
     _initDataFromState(context.read<HimtikaManagementBloc>().state);
   }
@@ -111,6 +109,18 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
       'description':
           'Melambangkan teknologi dan keberlanjutan yang dinamis dan terus bergerak membangun sumber daya mahasiswa yang kreatif, kompetitif, dan unggul',
     },
+  ];
+
+  static const String defaultVisi =
+      'Mengembangkan HIMTIKA sebagai sebuah Organisasi aktif yang menaungi dan bersinergi dengan Mahasiswa Informatika UNSIKA untuk Merealisasikan Lingkungan Informatika yang Eksploratif, Kolaboratif, dan Prestatif yang berasaskan rasa kekeluargaan dan profesionalitas.';
+
+  static const List<String> defaultMisi = [
+    'Menciptakan Sinergi yang berkelanjutan untuk membangun dan meningkatkan semangat berkarya dan berinovasi dalam ranah akademik dan non akademik maupun keorganisasian.',
+    'Mengaktualisasikan HIMTIKA sebagai sarana pengembangan akademik dan keilmuan Mahasiswa Informatika UNSIKA guna meningkatkan Eksplorasi, Inovasi, serta Kreatifitas untuk membentuk Mahasiswa yang Berprestasi di Tingkat Nasional maupun Internasional.',
+    'Memperkuat semangat kekeluargaan di lingkup internal maupun eksternal yang dijiwai rasa profesionalisme yang berimbang.',
+    'Memfasilitasi Mahasiswa Informatika untuk mengembangkan softskill dan hardskill yang diperlukan untuk menunjuang kehidupan perkuliahan Mahasiswa Informatika UNSIKA.',
+    'Menjalankan Program Kerja yang relevan dan sesuai dengan kebutuhan Mahasiswa Informatika UNSIKA dan nilai kebermanfaatan bagi kehidupan Mahasiswa Informatika di masa yang akan datang.',
+    'Menyelenggarakan dan Mengoptimalkan Kegiatan yang mendukung tercapainya Mahasiswa Informatika yang aktif, memiliki solidaritas yang tinggi, berintegritas serta wawasan dan keterampilan dalam bidang teknologi informasi yang berkompeten.',
   ];
 
   void _initDataFromState(HimtikaManagementState state) {
@@ -199,19 +209,30 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
     }
 
     if (state.about != null) {
-      _visiController.text = state.about!.visi;
-      _sejarahController.text = state.about!.sejarahText;
+      _visiController.text = state.about!.visi.isNotEmpty ? state.about!.visi : defaultVisi;
 
       for (var controller in _misiControllers) {
         controller.dispose();
       }
       _misiControllers.clear();
 
-      for (String item in state.about!.misi) {
+      final misiList = state.about!.misi.isNotEmpty ? state.about!.misi : defaultMisi;
+      for (String item in misiList) {
         _misiControllers.add(TextEditingController(text: item));
       }
       if (_misiControllers.isEmpty) {
         _misiControllers.add(TextEditingController());
+      }
+    } else {
+      if (_visiController.text.isEmpty) {
+        _visiController.text = defaultVisi;
+        for (var controller in _misiControllers) {
+          controller.dispose();
+        }
+        _misiControllers.clear();
+        for (String item in defaultMisi) {
+          _misiControllers.add(TextEditingController(text: item));
+        }
       }
     }
   }
@@ -224,7 +245,6 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
     _periodeController.dispose();
 
     _visiController.dispose();
-    _sejarahController.dispose();
     for (var c in _misiControllers) {
       c.dispose();
     }
@@ -395,7 +415,9 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         id: currentAbout?.id ?? '',
         visi: _visiController.text.trim(),
         misi: misiList,
-        sejarahText: _sejarahController.text.trim(),
+        sejarahText: (currentAbout?.sejarahText != null && currentAbout!.sejarahText.isNotEmpty)
+            ? currentAbout.sejarahText
+            : 'HIMTIKA didirikan sebagai wadah mahasiswa Informatika UNSIKA.',
       );
 
       context.read<HimtikaManagementBloc>().add(
@@ -935,10 +957,10 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
 
                 const SizedBox(height: 20),
 
-                // SECTION 2: EDIT ABOUT (VISI, MISI, SEJARAH)
+                // SECTION 2: EDIT ABOUT (VISI & MISI)
                 _buildCardSection(
-                  title: 'Profil HIMTIKA (Visi, Misi & Sejarah)',
-                  icon: Icons.article_outlined,
+                  title: 'Kelola Visi & Misi HIMTIKA',
+                  icon: Icons.lightbulb_outline,
                   child: Form(
                     key: _formKeyAbout,
                     child: Column(
@@ -1039,27 +1061,6 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                           },
                         ),
 
-                        const SizedBox(height: 16),
-
-                        // Sejarah HIMTIKA
-                        TextFormField(
-                          controller: _sejarahController,
-                          minLines: 4,
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
-                          decoration: InputDecoration(
-                            alignLabelWithHint: true,
-                            labelText: 'Sejarah HIMTIKA *',
-                            hintText: 'Tuliskan sejarah berdirinya HIMTIKA...',
-                            prefixIcon: const Icon(Icons.history_edu),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          validator: (value) => value == null || value.trim().isEmpty
-                              ? 'Sejarah tidak boleh kosong'
-                              : null,
-                        ),
                         const SizedBox(height: 20),
 
                         // Save About Button
@@ -1090,7 +1091,7 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                             label: Text(
                               state.isSubmitting
                                   ? 'Menyimpan...'
-                                  : 'Simpan Profil HIMTIKA',
+                                  : 'Simpan Visi & Misi HIMTIKA',
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.bold,

@@ -132,7 +132,7 @@ class HimtikaManagementBloc
       emit(state.copyWith(
         about: refreshedAbout ?? event.about,
         isSubmitting: false,
-        successMessage: 'Berhasil mengedit Visi, Misi, dan Sejarah!',
+        successMessage: 'Berhasil memperbarui Visi & Misi HIMTIKA!',
       ));
     } catch (e) {
       emit(state.copyWith(

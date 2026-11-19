@@ -1,11 +1,14 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
 
 part 'about_himtika_event.dart';
 part 'about_himtika_state.dart';
 
 class AboutHimtikaBloc extends Bloc<AboutHimtikaEvent, AboutHimtikaState> {
-  AboutHimtikaBloc() : super(const AboutHimtikaState()) {
+  final HimtikaRepository? repository;
+
+  AboutHimtikaBloc({this.repository}) : super(const AboutHimtikaState()) {
     on<FetchAboutData>(_onFetchAboutData);
   }
 
@@ -19,10 +22,10 @@ class AboutHimtikaBloc extends Bloc<AboutHimtikaEvent, AboutHimtikaState> {
     const aboutParagraph =
         'Himtika merupakan Himpunan Mahasiswa Informatika Unsika yang menjadi wadah bagi mahasiswa informatika agar dapat berkembang dan berprestasi.';
 
-    const visiParagraph =
+    String visiParagraph =
         'Mengembangkan HIMTIKA sebagai sebuah Organisasi aktif yang menaungi dan bersinergi dengan Mahasiswa Informatika UNSIKA untuk Merealisasikan Lingkungan Informatika yang Eksploratif, Kolaboratif, dan Prestatif yang berasaskan rasa kekeluargaan dan profesionalitas.';
 
-    const misiParagraph =
+    String misiParagraph =
         '1. Menciptakan Sinergi yang berkelanjutan untuk membangun dan meningkatkan semangat berkarya dan berinovasi dalam ranah akademik dan non akademik maupun keorganisasian.\n\n'
         '2. Mengaktualisasikan HIMTIKA sebagai sarana pengembangan akademik dan keilmuan Mahasiswa Informatika UNSIKA guna meningkatkan Eksplorasi, Inovasi, serta Kreatifitas untuk membentuk Mahasiswa yang Berprestasi di Tingkat Nasional maupun Internasional.\n\n'
         '3. Memperkuat semangat kekeluargaan di lingkup internal maupun eksternal yang dijiwai rasa profesionalisme yang berimbang.\n\n'
@@ -92,6 +95,26 @@ class AboutHimtikaBloc extends Bloc<AboutHimtikaEvent, AboutHimtikaState> {
 
     // Simulasikan delay loading
     await Future.delayed(const Duration(milliseconds: 300));
+
+    try {
+      if (repository != null) {
+        final about = await repository!.getAboutInfo();
+        if (about != null) {
+          if (about.visi.isNotEmpty) {
+            visiParagraph = about.visi;
+          }
+          if (about.misi.isNotEmpty) {
+            misiParagraph = about.misi
+                .asMap()
+                .entries
+                .map((e) => '${e.key + 1}. ${e.value}')
+                .join('\n\n');
+          }
+        }
+      }
+    } catch (_) {
+      // Fallback to initial default data on error
+    }
 
     emit(state.copyWith(
       status: AboutHimtikaStatus.success,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:himtika_mobile_information/core/injection_container.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/notification_page.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/pages/sejarah_screen.dart'; 
 import 'package:himtika_mobile_information/features/himtika/presentation/bloc/about_himtika/about_himtika_bloc.dart';
@@ -11,7 +12,7 @@ class AboutHimtikaScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // 2. Bungkus Scaffold dengan BlocProvider
     return BlocProvider(
-      create: (context) => AboutHimtikaBloc()..add(FetchAboutData()),
+      create: (context) => sl<AboutHimtikaBloc>()..add(FetchAboutData()),
       child: Scaffold(
         backgroundColor: Colors.white, // Latar belakang putih
         body: SafeArea(
