@@ -163,7 +163,12 @@ class HimtikaRemoteDataSourceImpl implements HimtikaRemoteDataSource {
     final fileName = '${DateTime.now().millisecondsSinceEpoch}_$baseName';
     final filePath = '$pathPrefix/$fileName';
 
-    await client.storage.from(bucketName).upload(filePath, file);
+    final bytes = await file.readAsBytes();
+    await client.storage.from(bucketName).uploadBinary(
+      filePath,
+      bytes,
+      fileOptions: const FileOptions(upsert: true),
+    );
     return client.storage.from(bucketName).getPublicUrl(filePath);
   }
 }

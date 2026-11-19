@@ -47,6 +47,17 @@ ALTER TABLE public.himtika_about ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.himtika_divisi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.himtika_pengurus ENABLE ROW LEVEL SECURITY;
 
+-- Hapus policy lama jika ada agar tidak error "already exists"
+DROP POLICY IF EXISTS "Public Read Kabinet" ON public.himtika_kabinet;
+DROP POLICY IF EXISTS "Public Read About" ON public.himtika_about;
+DROP POLICY IF EXISTS "Public Read Divisi" ON public.himtika_divisi;
+DROP POLICY IF EXISTS "Public Read Pengurus" ON public.himtika_pengurus;
+
+DROP POLICY IF EXISTS "Admin All Access Kabinet" ON public.himtika_kabinet;
+DROP POLICY IF EXISTS "Admin All Access About" ON public.himtika_about;
+DROP POLICY IF EXISTS "Admin All Access Divisi" ON public.himtika_divisi;
+DROP POLICY IF EXISTS "Admin All Access Pengurus" ON public.himtika_pengurus;
+
 CREATE POLICY "Public Read Kabinet" ON public.himtika_kabinet FOR SELECT USING (true);
 CREATE POLICY "Public Read About" ON public.himtika_about FOR SELECT USING (true);
 CREATE POLICY "Public Read Divisi" ON public.himtika_divisi FOR SELECT USING (true);
@@ -57,18 +68,19 @@ CREATE POLICY "Admin All Access About" ON public.himtika_about FOR ALL USING (au
 CREATE POLICY "Admin All Access Divisi" ON public.himtika_divisi FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Admin All Access Pengurus" ON public.himtika_pengurus FOR ALL USING (auth.role() = 'authenticated');
 
+-- Insert default data hanya jika tabel masih kosong (cegah duplikasi)
 INSERT INTO public.himtika_kabinet (nama_kabinet, tagline, deskripsi, periode, is_active)
-VALUES (
+SELECT 
     'SINERGIS',
     'Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, Sistematis',
     'Kabinet SINERGIS HIMTIKA periode 2024/2025 berfokus pada kolaborasi dan inovasi teknologi.',
     '2024/2025',
     true
-) ON CONFLICT DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM public.himtika_kabinet);
 
 INSERT INTO public.himtika_about (visi, misi, sejarah_text)
-VALUES (
+SELECT 
     'Mewujudkan HIMTIKA sebagai wadah pengembangan potensi mahasiswa Informatika UNSIKA yang berintegritas, inovatif, dan berdaya saing.',
     '["Menyelenggarakan kegiatan akademik dan non-akademik yang berkualitas", "Membangun hubungan internal dan eksternal yang sinergis", "Mengembangkan inovasi riset dan teknologi di lingkungan kampus"]'::jsonb,
     'HIMTIKA (Himpunan Mahasiswa Teknik Informatika) didirikan di Universitas Singaperbangsa Karawang sebagai wadah pemersatu dan aspirasi seluruh mahasiswa Informatika.'
-) ON CONFLICT DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM public.himtika_about);

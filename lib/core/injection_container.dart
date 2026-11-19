@@ -154,6 +154,7 @@ import 'package:himtika_mobile_information/core/blocs/connectivity_bloc.dart';
 
 // --- Himtika Feature Imports ---
 import 'package:himtika_mobile_information/features/himtika/presentation/bloc/about_himtika/about_himtika_bloc.dart';
+import 'package:himtika_mobile_information/features/himtika/presentation/bloc/divisi_detail/divisi_detail_bloc.dart';
 import 'package:himtika_mobile_information/features/himtika/data/datasources/himtika_remote_datasource.dart';
 import 'package:himtika_mobile_information/features/himtika/data/repositories/himtika_repository_impl.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
@@ -179,6 +180,7 @@ Future<void> initDependencies() async {
   sl.registerFactory(() => KabinetBloc(repository: sl<HimtikaRepository>()));
   sl.registerFactory(() => HimtikaBloc(repository: sl<HimtikaRepository>()));
   sl.registerFactory(() => AboutHimtikaBloc(repository: sl<HimtikaRepository>()));
+  sl.registerFactory(() => DivisiDetailBloc(repository: sl<HimtikaRepository>()));
 
   // --- CORE BLOCS ---
   sl.registerLazySingleton<ConnectivityBloc>(() => ConnectivityBloc());

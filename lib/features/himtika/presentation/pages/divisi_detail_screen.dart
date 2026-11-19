@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:himtika_mobile_information/core/injection_container.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/notification_page.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/bloc/divisi_detail/divisi_detail_bloc.dart';
 
 class DivisiDetailScreen extends StatelessWidget {
   final String divisiId;
-  const DivisiDetailScreen({super.key, required this.divisiId});
+  final String? divisiTitle;
+
+  const DivisiDetailScreen({
+    super.key,
+    required this.divisiId,
+    this.divisiTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) =>
-          DivisiDetailBloc()..add(FetchDivisiData(divisiId: divisiId)),
+      create: (context) => sl<DivisiDetailBloc>()
+        ..add(FetchDivisiData(divisiId: divisiId, divisiTitle: divisiTitle)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         body: SafeArea(
@@ -105,6 +112,7 @@ class DivisiDetailScreen extends StatelessWidget {
   Widget _buildHeroImage(BuildContext context, String imagePath) {
     final screenHeight = MediaQuery.of(context).size.height;
     final heroHeight = (screenHeight * 0.32).clamp(180.0, 300.0);
+
     return Container(
       width: double.infinity,
       height: heroHeight,
@@ -119,7 +127,7 @@ class DivisiDetailScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Image.asset(
-            imagePath,
+            imagePath.isNotEmpty ? imagePath : 'src/features/himtika/icon/himtika.png',
             width: heroHeight * 0.9,
             height: heroHeight * 0.9,
             fit: BoxFit.contain,
@@ -206,11 +214,16 @@ class DivisiDetailScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Judul Section (Hanya tampil jika BUKAN SC)
-              if (divisiId != 'Steering Committee')
+              if (state.title != 'Steering' &&
+                  divisiId != 'Steering Committee' &&
+                  divisiTitle != 'Steering Committee')
                 Text('Departemen di ${state.title!}',
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.bold)),
-              if (divisiId != 'Steering Committee') const SizedBox(height: 16),
+              if (state.title != 'Steering' &&
+                  divisiId != 'Steering Committee' &&
+                  divisiTitle != 'Steering Committee')
+                const SizedBox(height: 16),
 
               // ListView untuk 'departments'
               ListView.separated(
@@ -344,7 +357,7 @@ class DivisiDetailScreen extends StatelessWidget {
     );
   }
 
-  // Widget untuk kartu anggota (tidak berubah)
+  // Widget untuk kartu anggota
   Widget _buildMemberCard({
     required BuildContext context,
     required String imagePath,
@@ -354,6 +367,7 @@ class DivisiDetailScreen extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = (screenWidth * 0.88).clamp(260.0, 420.0);
     final cardHeight = (cardWidth * 0.58).clamp(180.0, 240.0);
+    final isNetwork = imagePath.startsWith('http://') || imagePath.startsWith('https://');
 
     return Center(
       child: Card(
@@ -364,10 +378,15 @@ class DivisiDetailScreen extends StatelessWidget {
           width: cardWidth,
           height: cardHeight,
           decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(imagePath),
-              fit: BoxFit.cover,
-            ),
+            color: const Color(0xFF0175C8),
+            image: imagePath.isNotEmpty
+                ? DecorationImage(
+                    image: isNetwork
+                        ? NetworkImage(imagePath) as ImageProvider
+                        : AssetImage(imagePath),
+                    fit: BoxFit.cover,
+                  )
+                : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),
@@ -376,7 +395,17 @@ class DivisiDetailScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Padding(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.75),
+                ],
+              ),
+            ),
             padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,

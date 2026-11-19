@@ -210,17 +210,21 @@ class HimtikaScreen extends StatelessWidget {
               final part = state.importantParts[index];
               return InkWell(
                 onTap: () {
-                  // 2. Navigasi ke halaman detail dengan ID
+                  // Navigasi ke halaman detail dengan ID & Title
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            DivisiDetailScreen(divisiId: part['title']!)),
+                      builder: (_) => DivisiDetailScreen(
+                        divisiId: part['id'] ?? part['title']!,
+                        divisiTitle: part['title'],
+                      ),
+                    ),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: _buildDivisiCard(
-                  imagePath: part['imagePath']!,
+                  imagePath: part['imagePath'] ?? '',
+                  title: part['title'],
                 ),
               );
             },
@@ -442,7 +446,8 @@ class HimtikaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDivisiCard({required String imagePath}) {
+  Widget _buildDivisiCard({required String imagePath, String? title}) {
+    final isNetwork = imagePath.startsWith('http://') || imagePath.startsWith('https://');
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -452,11 +457,28 @@ class HimtikaScreen extends StatelessWidget {
       child: Container(
         height: 150,
         decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(imagePath),
-            fit: BoxFit.cover,
-          ),
+          color: const Color(0xFF0175C8),
+          image: imagePath.isNotEmpty
+              ? DecorationImage(
+                  image: isNetwork
+                      ? NetworkImage(imagePath) as ImageProvider
+                      : AssetImage(imagePath),
+                  fit: BoxFit.cover,
+                )
+              : null,
         ),
+        child: imagePath.isEmpty && title != null
+            ? Center(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
       ),
     );
   }

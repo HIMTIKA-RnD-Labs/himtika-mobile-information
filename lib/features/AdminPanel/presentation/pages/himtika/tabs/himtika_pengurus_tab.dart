@@ -23,6 +23,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
     HimtikaManagementState state, {
     HimtikaPengurus? pengurus,
   }) {
+    final bloc = context.read<HimtikaManagementBloc>();
     if (state.divisiList.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -43,6 +44,11 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
             ? state.selectedDivisiId!
             : state.divisiList.first.id);
 
+    // Guard: Pastikan selectedDivisiId benar-benar ada di daftar divisi saat ini
+    if (!state.divisiList.any((d) => d.id == selectedDivisiId)) {
+      selectedDivisiId = state.divisiList.first.id;
+    }
+
     File? selectedFotoFile;
 
     showDialog(
@@ -50,7 +56,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
       barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (dialogInnerContext, setDialogState) {
             Future<void> pickFoto() async {
               final XFile? picked = await _picker.pickImage(
                 source: ImageSource.gallery,
@@ -90,35 +96,39 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Upload Photo Avatar
-                      GestureDetector(
-                        onTap: pickFoto,
-                        child: Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 42,
-                              backgroundColor: const Color(0xFF0175C8).withValues(alpha: 0.1),
-                              backgroundImage: selectedFotoFile != null
-                                  ? FileImage(selectedFotoFile!)
-                                  : (pengurus?.fotoUrl != null && pengurus!.fotoUrl!.isNotEmpty
-                                      ? NetworkImage(pengurus.fotoUrl!) as ImageProvider
-                                      : null),
-                              child: (selectedFotoFile == null &&
-                                      (pengurus?.fotoUrl == null || pengurus!.fotoUrl!.isEmpty))
-                                  ? const Icon(Icons.person, size: 48, color: Color(0xFF0175C8))
-                                  : null,
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: CircleAvatar(
-                                radius: 14,
-                                backgroundColor: const Color(0xFF0175C8),
-                                child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                      Builder(builder: (context) {
+                        final imageProvider = selectedFotoFile != null
+                            ? FileImage(selectedFotoFile!)
+                            : (pengurus?.fotoUrl != null && pengurus!.fotoUrl!.isNotEmpty
+                                ? NetworkImage(pengurus.fotoUrl!) as ImageProvider
+                                : null);
+                        return GestureDetector(
+                          onTap: pickFoto,
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 42,
+                                backgroundColor: const Color(0xFF0175C8).withValues(alpha: 0.1),
+                                backgroundImage: imageProvider,
+                                onBackgroundImageError: imageProvider != null ? (_, __) {} : null,
+                                child: (selectedFotoFile == null &&
+                                        (pengurus?.fotoUrl == null || pengurus!.fotoUrl!.isEmpty))
+                                    ? const Icon(Icons.person, size: 48, color: Color(0xFF0175C8))
+                                    : null,
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: const Color(0xFF0175C8),
+                                  child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 16),
 
                       // Nama Pengurus
@@ -154,6 +164,8 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                           labelText: 'Divisi *',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
+                        validator: (val) =>
+                            val == null || val.isEmpty ? 'Divisi wajib dipilih' : null,
                         items: state.divisiList.map((divisi) {
                           return DropdownMenuItem<String>(
                             value: divisi.id,
@@ -206,9 +218,9 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                           jabatan: jabatanController.text.trim(),
                           urutan: urutanVal,
                         );
-                        context.read<HimtikaManagementBloc>().add(
-                              CreatePengurusEvent(pengurus: newPengurus, fotoFile: selectedFotoFile),
-                            );
+                        bloc.add(
+                          CreatePengurusEvent(pengurus: newPengurus, fotoFile: selectedFotoFile),
+                        );
                       } else {
                         final updatedPengurus = pengurus.copyWith(
                           divisiId: selectedDivisiId,
@@ -216,12 +228,12 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                           jabatan: jabatanController.text.trim(),
                           urutan: urutanVal,
                         );
-                        context.read<HimtikaManagementBloc>().add(
-                              UpdatePengurusEvent(
-                                pengurus: updatedPengurus,
-                                fotoFile: selectedFotoFile,
-                              ),
-                            );
+                        bloc.add(
+                          UpdatePengurusEvent(
+                            pengurus: updatedPengurus,
+                            fotoFile: selectedFotoFile,
+                          ),
+                        );
                       }
                       Navigator.pop(dialogContext);
                     }
@@ -237,6 +249,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
   }
 
   void _confirmDeletePengurus(BuildContext context, HimtikaPengurus pengurus) {
+    final bloc = context.read<HimtikaManagementBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -254,9 +267,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
-                context
-                    .read<HimtikaManagementBloc>()
-                    .add(DeletePengurusEvent(pengurusId: pengurus.id));
+                bloc.add(DeletePengurusEvent(pengurusId: pengurus.id));
                 Navigator.pop(dialogContext);
               },
               child: const Text('Hapus'),
@@ -340,7 +351,10 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                               ),
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String?>(
-                                  value: state.selectedDivisiId,
+                                  value: (state.selectedDivisiId != null &&
+                                          state.divisiList.any((d) => d.id == state.selectedDivisiId))
+                                      ? state.selectedDivisiId
+                                      : null,
                                   isExpanded: true,
                                   hint: const Text('Semua Divisi'),
                                   items: [
@@ -413,16 +427,18 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                       child: ListTile(
                         contentPadding:
                             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 24,
-                          backgroundColor: const Color(0xFF0175C8).withValues(alpha: 0.1),
-                          backgroundImage: pengurus.fotoUrl != null && pengurus.fotoUrl!.isNotEmpty
-                              ? NetworkImage(pengurus.fotoUrl!)
-                              : null,
-                          child: (pengurus.fotoUrl == null || pengurus.fotoUrl!.isEmpty)
-                              ? const Icon(Icons.person, color: Color(0xFF0175C8))
-                              : null,
-                        ),
+                        leading: Builder(builder: (context) {
+                          final hasImage = pengurus.fotoUrl != null && pengurus.fotoUrl!.isNotEmpty;
+                          return CircleAvatar(
+                            radius: 24,
+                            backgroundColor: const Color(0xFF0175C8).withValues(alpha: 0.1),
+                            backgroundImage: hasImage ? NetworkImage(pengurus.fotoUrl!) : null,
+                            onBackgroundImageError: hasImage ? (_, __) {} : null,
+                            child: !hasImage
+                                ? const Icon(Icons.person, color: Color(0xFF0175C8))
+                                : null,
+                          );
+                        }),
                         title: Text(
                           pengurus.nama,
                           maxLines: 1,

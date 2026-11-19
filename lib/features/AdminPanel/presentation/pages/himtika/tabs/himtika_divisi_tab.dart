@@ -18,6 +18,7 @@ class _HimtikaDivisiTabState extends State<HimtikaDivisiTab> {
   final ImagePicker _picker = ImagePicker();
 
   void _showDivisiDialog(BuildContext context, {HimtikaDivisi? divisi}) {
+    final bloc = context.read<HimtikaManagementBloc>();
     final formKey = GlobalKey<FormState>();
     final namaController = TextEditingController(text: divisi?.namaDivisi ?? '');
     final deskripsiController = TextEditingController(text: divisi?.deskripsi ?? '');
@@ -29,7 +30,7 @@ class _HimtikaDivisiTabState extends State<HimtikaDivisiTab> {
       barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
+          builder: (dialogInnerContext, setDialogState) {
             Future<void> pickLogo() async {
               final XFile? picked = await _picker.pickImage(
                 source: ImageSource.gallery,
@@ -101,7 +102,7 @@ class _HimtikaDivisiTabState extends State<HimtikaDivisiTab> {
                                       children: [
                                         Icon(Icons.add_a_photo, color: Color(0xFF0175C8), size: 28),
                                         SizedBox(height: 4),
-                                        Text('Logo Divisi', style: TextStyle(fontSize: 10, color: Color(0xFF0175C8))),
+                                        Text('Foto Card Divisi', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, color: Color(0xFF0175C8))),
                                       ],
                                     )),
                         ),
@@ -167,18 +168,18 @@ class _HimtikaDivisiTabState extends State<HimtikaDivisiTab> {
                           deskripsi: deskripsiController.text.trim(),
                           urutan: urutanVal,
                         );
-                        context.read<HimtikaManagementBloc>().add(
-                              CreateDivisiEvent(divisi: newDivisi, logoFile: selectedLogoFile),
-                            );
+                        bloc.add(
+                          CreateDivisiEvent(divisi: newDivisi, logoFile: selectedLogoFile),
+                        );
                       } else {
                         final updatedDivisi = divisi.copyWith(
                           namaDivisi: namaController.text.trim(),
                           deskripsi: deskripsiController.text.trim(),
                           urutan: urutanVal,
                         );
-                        context.read<HimtikaManagementBloc>().add(
-                              UpdateDivisiEvent(divisi: updatedDivisi, logoFile: selectedLogoFile),
-                            );
+                        bloc.add(
+                          UpdateDivisiEvent(divisi: updatedDivisi, logoFile: selectedLogoFile),
+                        );
                       }
                       Navigator.pop(dialogContext);
                     }
@@ -194,6 +195,7 @@ class _HimtikaDivisiTabState extends State<HimtikaDivisiTab> {
   }
 
   void _confirmDeleteDivisi(BuildContext context, HimtikaDivisi divisi) {
+    final bloc = context.read<HimtikaManagementBloc>();
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -208,7 +210,7 @@ class _HimtikaDivisiTabState extends State<HimtikaDivisiTab> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
               onPressed: () {
-                context.read<HimtikaManagementBloc>().add(DeleteDivisiEvent(divisiId: divisi.id));
+                bloc.add(DeleteDivisiEvent(divisiId: divisi.id));
                 Navigator.pop(dialogContext);
               },
               child: const Text('Hapus'),

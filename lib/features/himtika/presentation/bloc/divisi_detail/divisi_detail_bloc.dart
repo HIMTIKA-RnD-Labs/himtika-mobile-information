@@ -1,5 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_divisi.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_pengurus.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
 
 part 'divisi_detail_event.dart';
 part 'divisi_detail_state.dart';
@@ -432,16 +435,214 @@ final Map<String, Map<String, dynamic>> _divisiDatabase = {
 };
 
 class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
-  DivisiDetailBloc() : super(const DivisiDetailState()) {
+  final HimtikaRepository? repository;
+
+  DivisiDetailBloc({this.repository}) : super(const DivisiDetailState()) {
     on<FetchDivisiData>(_onFetchDivisiData);
   }
 
   Future<void> _onFetchDivisiData(
       FetchDivisiData event, Emitter<DivisiDetailState> emit) async {
     emit(state.copyWith(status: DivisiDetailStatus.loading));
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 200));
 
-    final data = _divisiDatabase[event.divisiId];
+    // Coba ambil dari repository Supabase jika tersedia
+    if (repository != null) {
+      try {
+        final divisiList = await repository!.getDivisiList();
+        HimtikaDivisi? matchedDivisi;
+
+        for (final d in divisiList) {
+          if (d.id == event.divisiId) {
+            matchedDivisi = d;
+            break;
+          }
+        }
+        if (matchedDivisi == null && event.divisiTitle != null) {
+          final targetTitle = event.divisiTitle!.toLowerCase();
+          for (final d in divisiList) {
+            if (d.namaDivisi.toLowerCase() == targetTitle) {
+              matchedDivisi = d;
+              break;
+            }
+          }
+        }
+        if (matchedDivisi == null) {
+          final targetId = event.divisiId.toLowerCase();
+          for (final d in divisiList) {
+            if (d.namaDivisi.toLowerCase() == targetId) {
+              matchedDivisi = d;
+              break;
+            }
+          }
+        }
+
+        if (matchedDivisi != null) {
+          // Cari dummy matching sebagai fallback
+          Map<String, dynamic>? dummyData = _divisiDatabase[matchedDivisi.namaDivisi];
+          if (dummyData == null) {
+            for (final entry in _divisiDatabase.entries) {
+              final cleanEntryKey = entry.key.toLowerCase().replaceAll('divisi ', '').trim();
+              final cleanDivisiName = matchedDivisi.namaDivisi.toLowerCase().replaceAll('divisi ', '').trim();
+              if (cleanEntryKey == cleanDivisiName || cleanDivisiName.contains(cleanEntryKey)) {
+                dummyData = entry.value;
+                break;
+              }
+            }
+          }
+
+          // Judul & Gradient
+          String title = matchedDivisi.namaDivisi;
+          String? gradientTitle;
+          final lowerName = matchedDivisi.namaDivisi.toLowerCase();
+          if (lowerName.contains('steering') || lowerName == 'sc') {
+            title = 'Steering';
+            gradientTitle = 'Committee';
+          } else if (lowerName.startsWith('divisi ')) {
+            title = matchedDivisi.namaDivisi.substring(7);
+          }
+
+          // Deskripsi
+          String? description = (matchedDivisi.deskripsi != null && matchedDivisi.deskripsi!.isNotEmpty)
+              ? matchedDivisi.deskripsi
+              : dummyData?['description'];
+
+          // Hero logo tetap statis memakai logo HIMTIKA
+          const String heroLogoPath = 'src/features/himtika/icon/himtika.png';
+
+          // Pengurus dari database Supabase
+          final pengurusList = await repository!.getPengurusByDivisi(matchedDivisi.id);
+
+          Map<String, String>? divisionHead;
+          List<Map<String, dynamic>> departments = [];
+
+          if (pengurusList.isNotEmpty) {
+            HimtikaPengurus? head;
+            final remaining = <HimtikaPengurus>[];
+
+            for (final p in pengurusList) {
+              final posLower = p.jabatan.toLowerCase();
+              if (head == null &&
+                  (posLower.contains('ketua divisi') ||
+                   posLower.contains('ketua himpunan') ||
+                   posLower.contains('koordinator divisi'))) {
+                head = p;
+              } else {
+                remaining.add(p);
+              }
+            }
+
+            if (head != null) {
+              divisionHead = {
+                'name': head.nama,
+                'position': head.jabatan,
+                'image': head.fotoUrl ?? '',
+              };
+            }
+
+            // Grouping pengurus berdasarkan departemen di dalam jabatan
+            final Map<String, List<HimtikaPengurus>> deptMap = {};
+            final List<HimtikaPengurus> nonDeptMembers = [];
+
+            for (final p in remaining) {
+              final deptName = _extractDeptName(p.jabatan);
+              if (deptName.isNotEmpty) {
+                deptMap.putIfAbsent(deptName, () => []).add(p);
+              } else {
+                nonDeptMembers.add(p);
+              }
+            }
+
+            if (deptMap.isNotEmpty) {
+              deptMap.forEach((deptTitle, membersList) {
+                HimtikaPengurus? deptHead;
+                final deptRegularMembers = <HimtikaPengurus>[];
+
+                for (final m in membersList) {
+                  final pos = m.jabatan.toLowerCase();
+                  if (deptHead == null &&
+                      (pos.contains('ketua dept') ||
+                       pos.contains('kadep') ||
+                       pos.contains('koordinator'))) {
+                    deptHead = m;
+                  } else {
+                    deptRegularMembers.add(m);
+                  }
+                }
+
+                String? deptDesc;
+                if (dummyData != null && dummyData['departments'] != null) {
+                  final dummyDepts = dummyData['departments'] as List<dynamic>;
+                  for (final d in dummyDepts) {
+                    final dTitle = d['title'] as String?;
+                    if (dTitle != null &&
+                        dTitle.toLowerCase().contains(
+                            deptTitle.toLowerCase().replaceAll('dept. ', ''))) {
+                      deptDesc = d['description'] as String?;
+                      break;
+                    }
+                  }
+                }
+
+                departments.add({
+                  'title': deptTitle,
+                  'description': deptDesc,
+                  'departmentHead': deptHead != null
+                      ? {
+                          'name': deptHead.nama,
+                          'position': deptHead.jabatan,
+                          'image': deptHead.fotoUrl ?? '',
+                        }
+                      : null,
+                  'members': deptRegularMembers
+                      .map((e) => {
+                            'name': e.nama,
+                            'position': e.jabatan,
+                            'image': e.fotoUrl ?? '',
+                          })
+                      .toList(),
+                });
+              });
+            }
+
+            if (nonDeptMembers.isNotEmpty) {
+              departments.add({
+                'title': deptMap.isEmpty ? null : 'Anggota Lainnya',
+                'description': null,
+                'departmentHead': null,
+                'members': nonDeptMembers
+                    .map((e) => {
+                          'name': e.nama,
+                          'position': e.jabatan,
+                          'image': e.fotoUrl ?? '',
+                        })
+                    .toList(),
+              });
+            }
+          } else if (dummyData != null) {
+            final divisionHeadData = dummyData['divisionHead'] as Map<String, dynamic>?;
+            divisionHead = divisionHeadData != null ? Map<String, String>.from(divisionHeadData) : null;
+            departments = List<Map<String, dynamic>>.from(dummyData['departments']);
+          }
+
+          emit(state.copyWith(
+            status: DivisiDetailStatus.success,
+            title: title,
+            gradientTitle: gradientTitle,
+            description: description,
+            heroLogoPath: heroLogoPath,
+            divisionHead: divisionHead,
+            departments: departments,
+          ));
+          return;
+        }
+      } catch (_) {
+        // Fallback ke dummy static jika terjadi kegagalan
+      }
+    }
+
+    final data = _divisiDatabase[event.divisiId] ??
+        (event.divisiTitle != null ? _divisiDatabase[event.divisiTitle] : null);
 
     if (data != null) {
       final divisionHeadData = data['divisionHead'] as Map<String, dynamic>?;
@@ -457,5 +658,13 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
     } else {
       emit(state.copyWith(status: DivisiDetailStatus.failure));
     }
+  }
+
+  static String _extractDeptName(String jabatan) {
+    final match = RegExp(r'dept\.?\s*([a-zA-Z0-9\s&]+)', caseSensitive: false).firstMatch(jabatan);
+    if (match != null) {
+      return 'Dept. ${match.group(1)!.trim()}';
+    }
+    return '';
   }
 }

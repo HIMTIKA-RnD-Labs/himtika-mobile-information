@@ -152,7 +152,7 @@ class HimtikaManagementBloc
       if (event.logoFile != null) {
         logoUrl = await _repository.uploadImage(
           file: event.logoFile!,
-          bucketName: 'division_logos',
+          bucketName: 'himtika-assets',
           pathPrefix: 'divisi',
         );
       }
@@ -190,7 +190,7 @@ class HimtikaManagementBloc
       if (event.logoFile != null) {
         logoUrl = await _repository.uploadImage(
           file: event.logoFile!,
-          bucketName: 'division_logos',
+          bucketName: 'himtika-assets',
           pathPrefix: 'divisi',
         );
       }
