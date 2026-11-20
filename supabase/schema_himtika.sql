@@ -85,3 +85,37 @@ SELECT
     '["Menyelenggarakan kegiatan akademik dan non-akademik yang berkualitas", "Membangun hubungan internal dan eksternal yang sinergis", "Mengembangkan inovasi riset dan teknologi di lingkungan kampus"]'::jsonb,
     'HIMTIKA (Himpunan Mahasiswa Teknik Informatika) didirikan di Universitas Singaperbangsa Karawang sebagai wadah pemersatu dan aspirasi seluruh mahasiswa Informatika.'
 WHERE NOT EXISTS (SELECT 1 FROM public.himtika_about);
+
+-- Seed 6 Divisi Resmi
+INSERT INTO public.himtika_divisi (nama_divisi, urutan)
+SELECT name, urutan FROM (VALUES
+  ('Steering Committee', 0),
+  ('Divisi Internal', 1),
+  ('Divisi RnD', 2),
+  ('Divisi Relasi', 3),
+  ('Divisi Edukasi', 4),
+  ('Divisi Infokom', 5)
+) AS t(name, urutan)
+WHERE NOT EXISTS (SELECT 1 FROM public.himtika_divisi);
+
+-- ==================== STORAGE BUCKET ====================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('himtika-assets', 'himtika-assets', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Read Himtika Assets" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Upload Himtika Assets" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Update Himtika Assets" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Delete Himtika Assets" ON storage.objects;
+
+CREATE POLICY "Public Read Himtika Assets" ON storage.objects 
+FOR SELECT USING (bucket_id = 'himtika-assets');
+
+CREATE POLICY "Admin Upload Himtika Assets" ON storage.objects 
+FOR INSERT WITH CHECK (bucket_id = 'himtika-assets' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admin Update Himtika Assets" ON storage.objects 
+FOR UPDATE USING (bucket_id = 'himtika-assets' AND auth.role() = 'authenticated');
+
+CREATE POLICY "Admin Delete Himtika Assets" ON storage.objects 
+FOR DELETE USING (bucket_id = 'himtika-assets' AND auth.role() = 'authenticated');
