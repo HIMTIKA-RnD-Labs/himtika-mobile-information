@@ -88,11 +88,11 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
               ),
               title: Row(
                 children: [
-                  const Icon(Icons.camera_alt, color: Color(0xFF0175C8)),
+                  const Icon(Icons.edit, color: Color(0xFF0175C8)),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'Ubah Foto Pengurus',
+                      'Edit Pengurus',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -555,9 +555,9 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Kembalikan ke Foto Bawaan?'),
+        title: const Text('Kembalikan ke Data Bawaan?'),
         content: Text(
-          'Foto kustom untuk ${pengurus.nama} (${pengurus.jabatan}) akan dihapus dan kembali menggunakan foto bawaan resmi.',
+          'Data kustom untuk ${pengurus.nama} (${pengurus.jabatan}) akan dihapus dan kembali menggunakan data bawaan resmi.',
         ),
         actions: [
           TextButton(
@@ -795,12 +795,18 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                       }).firstOrNull;
                     }
 
-                    final bool isCustom = custom?.fotoUrl != null &&
+                    final bool hasCustomRecord = custom != null;
+                    final bool hasCustomPhoto = custom?.fotoUrl != null &&
                         custom!.fotoUrl!.isNotEmpty;
-                    final displayName = custom?.nama ?? member.name;
+                    final displayName = (custom?.nama != null && custom!.nama.trim().isNotEmpty)
+                        ? custom.nama
+                        : member.name;
+                    final displayJabatan = (custom?.jabatan != null && custom!.jabatan.trim().isNotEmpty)
+                        ? custom.jabatan
+                        : member.position;
 
                     ImageProvider imageProvider;
-                    if (isCustom) {
+                    if (hasCustomPhoto) {
                       imageProvider = NetworkImage(custom.fotoUrl!);
                     } else {
                       imageProvider = AssetImage(member.defaultAsset);
@@ -841,7 +847,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    member.position,
+                                    displayJabatan,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
@@ -861,22 +867,22 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: isCustom
+                                      color: hasCustomRecord
                                           ? Colors.green.shade50
                                           : Colors.grey.shade100,
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(
-                                        color: isCustom
+                                        color: hasCustomRecord
                                             ? Colors.green.shade300
                                             : Colors.grey.shade300,
                                       ),
                                     ),
                                     child: Text(
-                                      isCustom ? 'Foto Kustom' : 'Foto Bawaan',
+                                      hasCustomRecord ? 'Data Kustom' : 'Bawaan',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: isCustom
+                                        color: hasCustomRecord
                                             ? Colors.green.shade700
                                             : Colors.grey.shade600,
                                       ),
@@ -891,8 +897,8 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  tooltip: 'Ganti Foto',
-                                  icon: const Icon(Icons.camera_alt_outlined,
+                                  tooltip: 'Edit Pengurus',
+                                  icon: const Icon(Icons.edit_outlined,
                                       color: Color(0xFF0175C8)),
                                   onPressed: () => _showEditFotoDialog(
                                     context,
@@ -901,9 +907,9 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                                     divisiId: currentDivisi.id,
                                   ),
                                 ),
-                                if (isCustom)
+                                if (hasCustomRecord)
                                   IconButton(
-                                    tooltip: 'Kembalikan ke Foto Bawaan',
+                                    tooltip: 'Kembalikan ke Bawaan',
                                     icon: const Icon(Icons.restore,
                                         color: Colors.orange),
                                     onPressed: () =>

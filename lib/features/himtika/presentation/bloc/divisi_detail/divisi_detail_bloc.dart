@@ -607,6 +607,9 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
         if (match.nama.trim().isNotEmpty) {
           divisionHead['name'] = match.nama.trim();
         }
+        if (match.jabatan.trim().isNotEmpty) {
+          divisionHead['position'] = match.jabatan.trim();
+        }
       }
     }
 
@@ -623,6 +626,9 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
           if (match.nama.trim().isNotEmpty) {
             head['name'] = match.nama.trim();
           }
+          if (match.jabatan.trim().isNotEmpty) {
+            head['position'] = match.jabatan.trim();
+          }
         }
       }
 
@@ -636,6 +642,9 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
           }
           if (match.nama.trim().isNotEmpty) {
             m['name'] = match.nama.trim();
+          }
+          if (match.jabatan.trim().isNotEmpty) {
+            m['position'] = match.jabatan.trim();
           }
         }
       }
