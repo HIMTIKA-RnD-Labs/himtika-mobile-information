@@ -59,6 +59,7 @@ class HimtikaBloc extends Bloc<HimtikaEvent, HimtikaState> {
       return {
         'imagePath': defDiv.defaultCardAsset,
         'title': defDiv.name,
+        'isCustom': 'false',
       };
     }).toList();
 
@@ -77,6 +78,7 @@ class HimtikaBloc extends Bloc<HimtikaEvent, HimtikaState> {
 
             if (match?.logoUrl != null && match!.logoUrl!.isNotEmpty) {
               part['imagePath'] = match.logoUrl!;
+              part['isCustom'] = 'true';
             }
           }
         }
