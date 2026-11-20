@@ -7,11 +7,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:himtika_mobile_information/core/helpers/image_optimizer.dart';
 import 'package:himtika_mobile_information/core/injection_container.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/bloc/invitation/invitation_bloc.dart';
-import 'package:himtika_mobile_information/features/hicode/presentation/bloc/main_screen/main_screen_bloc.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/calendar_screen.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/notification_page.dart';
 import 'package:himtika_mobile_information/features/hicode/presentation/pages/main_screen.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/pages/himtika_screen.dart';
+import 'package:himtika_mobile_information/features/himtika/presentation/pages/divisi_detail_screen.dart';
 import 'package:himtika_mobile_information/features/home/presentation/pages/sidebar_home.dart';
 import 'package:himtika_mobile_information/utility/undermaintance_screen.dart';
 import 'package:himtika_mobile_information/utility/comingsoon_screen.dart';
@@ -534,25 +534,75 @@ class _HomePageState extends State<HomePage> {
                                       itemCount: state.divisions.length,
                                       itemBuilder: (_, index) {
                                         final division = state.divisions[index];
-                                        return Container(
-                                          width: 200,
-                                          margin: EdgeInsets.only(
-                                              left: index == 0 ? 16 : 8,
-                                              right: index ==
-                                                      state.divisions.length - 1
-                                                  ? 16
-                                                  : 0),
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            image: DecorationImage(
-                                              image: NetworkImage(ImageOptimizer
-                                                  .getOptimizedUrl(
-                                                      division.logoUrl,
-                                                      width: 400,
-                                                      quality: 80)),
-                                              fit: BoxFit.contain,
+                                        final isNetwork = division.logoUrl
+                                                .startsWith('http://') ||
+                                            division.logoUrl
+                                                .startsWith('https://');
+                                        final imageProvider = isNetwork
+                                            ? NetworkImage(
+                                                    ImageOptimizer.getOptimizedUrl(
+                                                        division.logoUrl,
+                                                        width: 400,
+                                                        quality: 80))
+                                                as ImageProvider
+                                            : AssetImage(division.logoUrl);
+
+                                        return InkWell(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    DivisiDetailScreen(
+                                                  divisiId: division.name,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          child: Container(
+                                            width: 200,
+                                            margin: EdgeInsets.only(
+                                                left: index == 0 ? 16 : 8,
+                                                right: index ==
+                                                        state.divisions.length -
+                                                            1
+                                                    ? 16
+                                                    : 0),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0175C8),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              image: DecorationImage(
+                                                image: imageProvider,
+                                                fit: BoxFit.cover,
+                                              ),
                                             ),
+                                            alignment: Alignment.bottomLeft,
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 8),
+                                            child: division.isCustom
+                                                ? Text(
+                                                    division.name,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      shadows: [
+                                                        Shadow(
+                                                          offset: Offset(0, 1),
+                                                          blurRadius: 4,
+                                                          color: Colors.black87,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  )
+                                                : null,
                                           ),
                                         );
                                       },
