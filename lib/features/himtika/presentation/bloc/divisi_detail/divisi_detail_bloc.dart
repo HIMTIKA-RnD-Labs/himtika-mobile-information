@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:himtika_mobile_information/features/himtika/data/datasources/himtika_default_structure.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_divisi.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_pengurus.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
@@ -493,9 +494,20 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
     // 3. Update gambar & nama anggota dari database jika ada inputan admin
     if (repository != null) {
       try {
-        final pengurusList = await repository!.getAllPengurus();
+        final divisiList = await repository!.getDivisiList();
+        final matchedDivisi = divisiList.where((d) {
+          final cleanD = d.namaDivisi.toLowerCase().replaceAll('divisi ', '').trim();
+          final cleanTarget = event.divisiId.toLowerCase().replaceAll('divisi ', '').trim();
+          return cleanD == cleanTarget;
+        }).firstOrNull;
+
+        final pengurusList = matchedDivisi != null
+            ? await repository!.getPengurusByDivisi(matchedDivisi.id)
+            : await repository!.getAllPengurus();
+
         if (pengurusList.isNotEmpty) {
           _applyPengurusUpdates(
+            divisiId: matchedDivisi?.id,
             divisionHead: divisionHead,
             departments: departments,
             pengurusList: pengurusList,
@@ -518,6 +530,7 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
   }
 
   static void _applyPengurusUpdates({
+    String? divisiId,
     required Map<String, String>? divisionHead,
     required List<Map<String, dynamic>> departments,
     required List<HimtikaPengurus> pengurusList,
@@ -528,7 +541,27 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
       final targetName = name?.trim().toLowerCase() ?? '';
       final targetPos = position?.trim().toLowerCase() ?? '';
 
-      // 1. Match nama & posisi persis
+      // Cari slot default di HimtikaDefaultStructure
+      DefaultMember? defaultMember;
+      for (final dm in HimtikaDefaultStructure.allMembers) {
+        if (dm.name.trim().toLowerCase() == targetName) {
+          defaultMember = dm;
+          break;
+        }
+      }
+
+      // 1. Cocokkan urutan slot & divisi jika diketahui
+      if (defaultMember != null) {
+        for (final p in pengurusList) {
+          if (usedPengurusIds.contains(p.id)) continue;
+          final matchDivisi = divisiId == null || p.divisiId == divisiId;
+          if (matchDivisi && p.urutan == defaultMember.urutan) {
+            return p;
+          }
+        }
+      }
+
+      // 2. Cocokkan nama & posisi persis
       for (final p in pengurusList) {
         if (usedPengurusIds.contains(p.id)) continue;
         if (targetName.isNotEmpty &&
@@ -539,7 +572,7 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
         }
       }
 
-      // 2. Match nama
+      // 3. Cocokkan nama persis
       if (targetName.isNotEmpty) {
         for (final p in pengurusList) {
           if (usedPengurusIds.contains(p.id)) continue;
@@ -549,11 +582,13 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
         }
       }
 
-      // 3. Match posisi / jabatan
-      if (targetPos.isNotEmpty) {
+      // 4. Cocokkan kemiripan nama dan jabatan yang sama
+      if (targetName.isNotEmpty && targetPos.isNotEmpty) {
         for (final p in pengurusList) {
           if (usedPengurusIds.contains(p.id)) continue;
-          if (p.jabatan.trim().toLowerCase() == targetPos) {
+          final pName = p.nama.trim().toLowerCase();
+          final sameJabatan = p.jabatan.trim().toLowerCase() == targetPos;
+          if (sameJabatan && (pName.contains(targetName) || targetName.contains(pName))) {
             return p;
           }
         }

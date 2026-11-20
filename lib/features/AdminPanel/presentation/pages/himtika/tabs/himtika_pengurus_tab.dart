@@ -209,8 +209,10 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                         ));
                       } else {
                         final updated = customPengurus.copyWith(
+                          divisiId: divisiId,
                           nama: namaController.text.trim(),
                           jabatan: jabatanController.text.trim(),
+                          urutan: defaultMember.urutan,
                         );
                         bloc.add(UpdatePengurusEvent(
                           pengurus: updated,
@@ -539,16 +541,37 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                     final member = defaultMembers[index];
 
                     // Cari apakah pengurus ini sudah diupdate di Supabase
-                    HimtikaPengurus? custom = state.pengurusList.where((p) {
-                      final sameJabatan = p.jabatan.trim().toLowerCase() ==
-                          member.position.trim().toLowerCase();
-                      return sameJabatan;
-                    }).firstOrNull;
+                    HimtikaPengurus? custom;
 
+                    // 1. Cocokkan urutan slot & divisi spesifik
+                    if (currentDivisi.id.isNotEmpty) {
+                      custom = state.pengurusList.where((p) {
+                        return p.divisiId == currentDivisi.id && p.urutan == member.urutan;
+                      }).firstOrNull;
+                    }
+
+                    // 2. Cocokkan nama lengkap persis (case-insensitive)
                     if (custom == null) {
                       custom = state.pengurusList.where((p) {
-                        return p.nama.trim().toLowerCase() ==
-                            member.name.trim().toLowerCase();
+                        final sameName = p.nama.trim().toLowerCase() == member.name.trim().toLowerCase();
+                        if (currentDivisi.id.isNotEmpty) {
+                          return sameName && p.divisiId == currentDivisi.id;
+                        }
+                        return sameName;
+                      }).firstOrNull;
+                    }
+
+                    // 3. Cocokkan kemiripan nama dengan jabatan yang sama
+                    if (custom == null) {
+                      custom = state.pengurusList.where((p) {
+                        final pName = p.nama.trim().toLowerCase();
+                        final mName = member.name.trim().toLowerCase();
+                        final isSimilar = pName.contains(mName) || mName.contains(pName);
+                        final sameJabatan = p.jabatan.trim().toLowerCase() == member.position.trim().toLowerCase();
+                        if (currentDivisi.id.isNotEmpty) {
+                          return isSimilar && sameJabatan && p.divisiId == currentDivisi.id;
+                        }
+                        return isSimilar && sameJabatan;
                       }).firstOrNull;
                     }
 
