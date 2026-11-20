@@ -118,8 +118,10 @@ class HimtikaRemoteDataSourceImpl implements HimtikaRemoteDataSource {
 
   @override
   Future<void> updateDivisi(HimtikaDivisiModel divisi) async {
+    final data = divisi.toJson();
+    data.remove('id');
     await SupabaseTableHelper.table('himtika_divisi')
-        .update(divisi.toJson())
+        .update(data)
         .eq('id', divisi.id);
   }
 

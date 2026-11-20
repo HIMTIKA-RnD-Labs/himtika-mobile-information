@@ -27,7 +27,7 @@ class _HimtikaAdminHomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         drawer: const Sidebar(),
         appBar: AppBar(
@@ -47,6 +47,10 @@ class _HimtikaAdminHomeView extends StatelessWidget {
               Tab(
                 icon: Icon(Icons.account_balance, size: 20),
                 text: 'Kabinet & Profil',
+              ),
+              Tab(
+                icon: Icon(Icons.view_carousel_outlined, size: 20),
+                text: 'Card Divisi',
               ),
               Tab(
                 icon: Icon(Icons.people_alt, size: 20),
@@ -128,6 +132,7 @@ class _HimtikaAdminHomeView extends StatelessWidget {
               return const TabBarView(
                 children: [
                   HimtikaKabinetAboutTab(),
+                  HimtikaDivisiTab(),
                   HimtikaPengurusTab(),
                 ],
               );

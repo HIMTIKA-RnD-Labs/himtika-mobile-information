@@ -1,3 +1,15 @@
+class DefaultDivision {
+  final String name;
+  final String defaultCardAsset;
+  final int urutan;
+
+  const DefaultDivision({
+    required this.name,
+    required this.defaultCardAsset,
+    required this.urutan,
+  });
+}
+
 class DefaultMember {
   final String division;
   final String? department;
@@ -17,6 +29,39 @@ class DefaultMember {
 }
 
 class HimtikaDefaultStructure {
+  static const List<DefaultDivision> defaultDivisions = [
+    DefaultDivision(
+      name: 'Steering Committee',
+      defaultCardAsset: 'src/features/himtika/divisi/sc/sc.png',
+      urutan: 0,
+    ),
+    DefaultDivision(
+      name: 'Divisi Internal',
+      defaultCardAsset: 'src/features/himtika/divisi/internal/internal.png',
+      urutan: 1,
+    ),
+    DefaultDivision(
+      name: 'Divisi RnD',
+      defaultCardAsset: 'src/features/himtika/divisi/rnd/rnd.png',
+      urutan: 2,
+    ),
+    DefaultDivision(
+      name: 'Divisi Relasi',
+      defaultCardAsset: 'src/features/himtika/divisi/relasi/relasi.png',
+      urutan: 3,
+    ),
+    DefaultDivision(
+      name: 'Divisi Edukasi',
+      defaultCardAsset: 'src/features/himtika/divisi/edukasi/edukasi.png',
+      urutan: 4,
+    ),
+    DefaultDivision(
+      name: 'Divisi Infokom',
+      defaultCardAsset: 'src/features/himtika/divisi/infokom/infokom.png',
+      urutan: 5,
+    ),
+  ];
+
   static const List<String> divisionNames = [
     'Steering Committee',
     'Divisi Internal',

@@ -444,6 +444,8 @@ class HimtikaScreen extends StatelessWidget {
   }
 
   Widget _buildDivisiCard({required String imagePath}) {
+    final isNetwork =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -453,8 +455,11 @@ class HimtikaScreen extends StatelessWidget {
       child: Container(
         height: 150,
         decoration: BoxDecoration(
+          color: const Color(0xFF0175C8),
           image: DecorationImage(
-            image: AssetImage(imagePath),
+            image: isNetwork
+                ? NetworkImage(imagePath) as ImageProvider
+                : AssetImage(imagePath),
             fit: BoxFit.cover,
           ),
         ),
