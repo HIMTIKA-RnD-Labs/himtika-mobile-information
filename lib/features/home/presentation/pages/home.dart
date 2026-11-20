@@ -299,10 +299,15 @@ class _HomePageState extends State<HomePage> {
 
                     // 2. Konten (Dibungkus Expanded agar bisa di-scroll)
                     Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                      child: RefreshIndicator(
+                        onRefresh: () async {
+                          context.read<HomeBloc>().add(LoadHomeData());
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                             // 3. Pindahkan semua sisa konten ke sini
                             const SizedBox(height: 24),
 
@@ -391,7 +396,13 @@ class _HomePageState extends State<HomePage> {
                                             MaterialPageRoute(
                                                 builder: (_) =>
                                                     const HimtikaScreen()),
-                                          );
+                                          ).then((_) {
+                                            if (context.mounted) {
+                                              context
+                                                  .read<HomeBloc>()
+                                                  .add(LoadHomeData());
+                                            }
+                                          });
                                         },
                                       ),
                                       _menuItem(
@@ -619,6 +630,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
+                  ),
                   ],
                 ),
               ],

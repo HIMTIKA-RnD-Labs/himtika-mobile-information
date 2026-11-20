@@ -316,7 +316,10 @@ Future<void> initDependencies() async {
       () => HomeRemoteDatasourceImpl(client: sl()));
   // Repository
   sl.registerLazySingleton<HomeRepository>(
-      () => HomeRepositoryImpl(remoteDatasource: sl()));
+      () => HomeRepositoryImpl(
+            remoteDatasource: sl(),
+            himtikaRepository: sl<HimtikaRepository>(),
+          ));
   // Usecases
   sl.registerLazySingleton(() => GetHomeContent(sl()));
   // BLoCs
