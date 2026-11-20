@@ -507,6 +507,7 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
         if (pengurusList.isNotEmpty) {
           _applyPengurusUpdates(
             divisiId: matchedDivisi?.id,
+            divisionName: event.divisiId,
             divisionHead: divisionHead,
             departments: departments,
             pengurusList: pengurusList,
@@ -530,22 +531,44 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
 
   static void _applyPengurusUpdates({
     String? divisiId,
+    String? divisionName,
     required Map<String, String>? divisionHead,
     required List<Map<String, dynamic>> departments,
     required List<HimtikaPengurus> pengurusList,
   }) {
     final usedPengurusIds = <String>{};
 
+    final cleanDivision = (divisionName ?? '')
+        .toLowerCase()
+        .replaceAll('divisi ', '')
+        .trim();
+
     HimtikaPengurus? findMatch(String? name, String? position) {
       final targetName = name?.trim().toLowerCase() ?? '';
       final targetPos = position?.trim().toLowerCase() ?? '';
 
-      // Cari slot default di HimtikaDefaultStructure
+      // Cari slot default di HimtikaDefaultStructure untuk divisi ini
       DefaultMember? defaultMember;
       for (final dm in HimtikaDefaultStructure.allMembers) {
-        if (dm.name.trim().toLowerCase() == targetName) {
+        final cleanDmDiv =
+            dm.division.toLowerCase().replaceAll('divisi ', '').trim();
+        final matchDiv = cleanDivision.isEmpty || cleanDmDiv == cleanDivision;
+        if (matchDiv && dm.name.trim().toLowerCase() == targetName) {
           defaultMember = dm;
           break;
+        }
+      }
+
+      // Jika belum ketemu dan targetPos ada, cari berdasarkan targetPos di divisi ini
+      if (defaultMember == null && targetPos.isNotEmpty) {
+        for (final dm in HimtikaDefaultStructure.allMembers) {
+          final cleanDmDiv =
+              dm.division.toLowerCase().replaceAll('divisi ', '').trim();
+          final matchDiv = cleanDivision.isEmpty || cleanDmDiv == cleanDivision;
+          if (matchDiv && dm.position.trim().toLowerCase() == targetPos) {
+            defaultMember = dm;
+            break;
+          }
         }
       }
 
@@ -587,7 +610,8 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
           if (usedPengurusIds.contains(p.id)) continue;
           final pName = p.nama.trim().toLowerCase();
           final sameJabatan = p.jabatan.trim().toLowerCase() == targetPos;
-          if (sameJabatan && (pName.contains(targetName) || targetName.contains(pName))) {
+          if (sameJabatan &&
+              (pName.contains(targetName) || targetName.contains(pName))) {
             return p;
           }
         }
@@ -596,28 +620,75 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
       return null;
     }
 
-    // Update Division Head
+    // 1. Update Division Head (Ketua Divisi sebelum departemen)
     if (divisionHead != null) {
-      final match = findMatch(divisionHead['name'], divisionHead['position']);
-      if (match != null) {
-        usedPengurusIds.add(match.id);
-        if (match.fotoUrl != null && match.fotoUrl!.isNotEmpty) {
-          divisionHead['image'] = match.fotoUrl!;
+      HimtikaPengurus? headMatch;
+
+      // a. Cari pengurus yang jabatannya mengandung 'Ketua Divisi'
+      headMatch = pengurusList.where((p) {
+        if (usedPengurusIds.contains(p.id)) return false;
+        final matchDiv = divisiId == null || p.divisiId == divisiId;
+        return matchDiv &&
+            p.jabatan.trim().toLowerCase().contains('ketua divisi');
+      }).firstOrNull;
+
+      // b. Jika tidak ada, cari slot urutan 1
+      headMatch ??= pengurusList.where((p) {
+        if (usedPengurusIds.contains(p.id)) return false;
+        final matchDiv = divisiId == null || p.divisiId == divisiId;
+        return matchDiv && p.urutan == 1;
+      }).firstOrNull;
+
+      // c. Fallback ke findMatch
+      headMatch ??= findMatch(divisionHead['name'], divisionHead['position']);
+
+      if (headMatch != null) {
+        usedPengurusIds.add(headMatch.id);
+        if (headMatch.fotoUrl != null && headMatch.fotoUrl!.isNotEmpty) {
+          divisionHead['image'] = headMatch.fotoUrl!;
         }
-        if (match.nama.trim().isNotEmpty) {
-          divisionHead['name'] = match.nama.trim();
+        if (headMatch.nama.trim().isNotEmpty) {
+          divisionHead['name'] = headMatch.nama.trim();
         }
-        if (match.jabatan.trim().isNotEmpty) {
-          divisionHead['position'] = match.jabatan.trim();
+        if (headMatch.jabatan.trim().isNotEmpty) {
+          divisionHead['position'] = headMatch.jabatan.trim();
+        }
+      }
+
+      // Tandai semua pengurus dengan jabatan 'Ketua Divisi' agar tidak pernah bocor ke anggota departemen
+      for (final p in pengurusList) {
+        if (p.jabatan.trim().toLowerCase().contains('ketua divisi')) {
+          usedPengurusIds.add(p.id);
         }
       }
     }
 
-    // Update Departments
+    // 2. Update Departments
     for (final dept in departments) {
       if (dept['departmentHead'] != null) {
         final head = dept['departmentHead'] as Map<String, String>;
-        final match = findMatch(head['name'], head['position']);
+        var match = findMatch(head['name'], head['position']);
+
+        // Jika belum ketemu, cari berdasarkan nama departemen
+        if (match == null) {
+          final deptTitle = (dept['title'] as String?)?.toLowerCase() ?? '';
+          final cleanDept = deptTitle
+              .replaceAll('departemen', '')
+              .replaceAll('dept.', '')
+              .replaceAll('dept', '')
+              .trim();
+          if (cleanDept.isNotEmpty) {
+            match = pengurusList.where((p) {
+              if (usedPengurusIds.contains(p.id)) return false;
+              final pJabatan = p.jabatan.toLowerCase();
+              final isKadep = pJabatan.contains('ketua dept') ||
+                  pJabatan.contains('kadep') ||
+                  pJabatan.contains('kepala departemen');
+              return isKadep && pJabatan.contains(cleanDept);
+            }).firstOrNull;
+          }
+        }
+
         if (match != null) {
           usedPengurusIds.add(match.id);
           if (match.fotoUrl != null && match.fotoUrl!.isNotEmpty) {
@@ -650,10 +721,15 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
       }
     }
 
-    // Tambahkan pengurus baru yang belum ada di blueprint bawaan
+    // 3. Tambahkan pengurus baru yang belum ada di blueprint bawaan
     for (final p in pengurusList) {
       if (usedPengurusIds.contains(p.id)) continue;
       usedPengurusIds.add(p.id);
+
+      // Jangan pernah masukkan jabatan Ketua Divisi ke dalam departemen
+      if (p.jabatan.trim().toLowerCase().contains('ketua divisi')) {
+        continue;
+      }
 
       final newMember = {
         'name': p.nama.trim(),
