@@ -640,5 +640,49 @@ class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
         }
       }
     }
+
+    // Tambahkan pengurus baru yang belum ada di blueprint bawaan
+    for (final p in pengurusList) {
+      if (usedPengurusIds.contains(p.id)) continue;
+      usedPengurusIds.add(p.id);
+
+      final newMember = {
+        'name': p.nama.trim(),
+        'position': p.jabatan.trim(),
+        'image': p.fotoUrl ?? '',
+      };
+
+      // Coba cocokkan ke departemen yang sesuai berdasarkan nama jabatan
+      bool added = false;
+      final pJabatanLower = p.jabatan.toLowerCase();
+      for (final dept in departments) {
+        final deptTitle = (dept['title'] as String?)?.toLowerCase() ?? '';
+        if (deptTitle.isNotEmpty) {
+          final cleanDept = deptTitle
+              .replaceAll('departemen', '')
+              .replaceAll('dept.', '')
+              .replaceAll('dept', '')
+              .trim();
+          if (cleanDept.isNotEmpty && pJabatanLower.contains(cleanDept)) {
+            (dept['members'] as List<Map<String, String>>).add(newMember);
+            added = true;
+            break;
+          }
+        }
+      }
+
+      if (!added) {
+        if (departments.isNotEmpty) {
+          (departments.last['members'] as List<Map<String, String>>).add(newMember);
+        } else {
+          departments.add({
+            'title': 'Anggota Tambahan',
+            'description': null,
+            'departmentHead': null,
+            'members': [newMember],
+          });
+        }
+      }
+    }
   }
 }

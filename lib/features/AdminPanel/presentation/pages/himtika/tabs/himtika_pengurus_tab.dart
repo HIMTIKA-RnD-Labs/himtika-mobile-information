@@ -27,13 +27,11 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
       (d) =>
           d.namaDivisi.toLowerCase().replaceAll('divisi ', '').trim() ==
           cleanTarget,
-      orElse: () => state.divisiList.isNotEmpty
-          ? state.divisiList.first
-          : HimtikaDivisi(
-              id: '',
-              namaDivisi: divisionName,
-              urutan: 0,
-            ),
+      orElse: () => HimtikaDivisi(
+        id: '',
+        namaDivisi: divisionName,
+        urutan: 0,
+      ),
     );
   }
 
@@ -236,6 +234,16 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
     BuildContext context, {
     required String divisiId,
   }) {
+    if (divisiId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'Divisi belum ditemukan di database. Pastikan data divisi sudah tersimpan.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     final bloc = context.read<HimtikaManagementBloc>();
     final formKey = GlobalKey<FormState>();
     final namaController = TextEditingController();
@@ -372,6 +380,177 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
     );
   }
 
+  void _showEditCustomMemberDialog(
+    BuildContext context, {
+    required HimtikaPengurus pengurus,
+  }) {
+    final bloc = context.read<HimtikaManagementBloc>();
+    final formKey = GlobalKey<FormState>();
+    final namaController = TextEditingController(text: pengurus.nama);
+    final jabatanController = TextEditingController(text: pengurus.jabatan);
+    File? selectedFotoFile;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> pickFoto() async {
+              final picked =
+                  await _picker.pickImage(source: ImageSource.gallery);
+              if (picked != null) {
+                setDialogState(() {
+                  selectedFotoFile = File(picked.path);
+                });
+              }
+            }
+
+            ImageProvider? avatarImage;
+            if (selectedFotoFile != null) {
+              avatarImage = FileImage(selectedFotoFile!);
+            } else if (pengurus.fotoUrl != null &&
+                pengurus.fotoUrl!.isNotEmpty) {
+              avatarImage = NetworkImage(pengurus.fotoUrl!);
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Row(
+                children: [
+                  Icon(Icons.edit, color: Color(0xFF0175C8)),
+                  SizedBox(width: 8),
+                  Text('Edit Anggota',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: pickFoto,
+                        child: CircleAvatar(
+                          radius: 40,
+                          backgroundColor:
+                              const Color(0xFF0175C8).withValues(alpha: 0.1),
+                          backgroundImage: avatarImage,
+                          child: avatarImage == null
+                              ? const Icon(Icons.camera_alt,
+                                  size: 32, color: Color(0xFF0175C8))
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: pickFoto,
+                        icon: const Icon(Icons.photo_library, size: 16),
+                        label: const Text('Ganti Foto'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: namaController,
+                        decoration: InputDecoration(
+                          labelText: 'Nama Pengurus *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Nama wajib diisi'
+                                : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: jabatanController,
+                        decoration: InputDecoration(
+                          labelText: 'Jabatan (Contoh: Anggota Dept. HRD) *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Jabatan wajib diisi'
+                                : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Batal',
+                      style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0175C8),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (formKey.currentState!.validate()) {
+                      final updated = pengurus.copyWith(
+                        nama: namaController.text.trim(),
+                        jabatan: jabatanController.text.trim(),
+                      );
+                      bloc.add(UpdatePengurusEvent(
+                        pengurus: updated,
+                        fotoFile: selectedFotoFile,
+                      ));
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteAdditional(BuildContext context, HimtikaPengurus pengurus) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Anggota?'),
+        content: Text(
+          'Anggota ${pengurus.nama} (${pengurus.jabatan}) akan dihapus secara permanen dari divisi ini.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context
+                  .read<HimtikaManagementBloc>()
+                  .add(DeletePengurusEvent(pengurusId: pengurus.id));
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmReset(BuildContext context, HimtikaPengurus pengurus) {
     showDialog(
       context: context,
@@ -407,9 +586,50 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
   Widget build(BuildContext context) {
     return BlocBuilder<HimtikaManagementBloc, HimtikaManagementState>(
       builder: (context, state) {
-        final currentDivisi = _findDivisi(context.read<HimtikaManagementBloc>().state, _selectedDivision);
+        final currentDivisi = _findDivisi(state, _selectedDivision);
         final defaultMembers =
             HimtikaDefaultStructure.getMembersByDivision(_selectedDivision);
+
+        final matchedPengurusIds = <String>{};
+        for (final member in defaultMembers) {
+          HimtikaPengurus? custom;
+          if (currentDivisi.id.isNotEmpty) {
+            custom = state.pengurusList.where((p) {
+              return p.divisiId == currentDivisi.id && p.urutan == member.urutan;
+            }).firstOrNull;
+          }
+          if (custom == null) {
+            custom = state.pengurusList.where((p) {
+              final sameName = p.nama.trim().toLowerCase() == member.name.trim().toLowerCase();
+              if (currentDivisi.id.isNotEmpty) {
+                return sameName && p.divisiId == currentDivisi.id;
+              }
+              return sameName;
+            }).firstOrNull;
+          }
+          if (custom == null) {
+            custom = state.pengurusList.where((p) {
+              final pName = p.nama.trim().toLowerCase();
+              final mName = member.name.trim().toLowerCase();
+              final isSimilar = pName.contains(mName) || mName.contains(pName);
+              final sameJabatan = p.jabatan.trim().toLowerCase() == member.position.trim().toLowerCase();
+              if (currentDivisi.id.isNotEmpty) {
+                return isSimilar && sameJabatan && p.divisiId == currentDivisi.id;
+              }
+              return isSimilar && sameJabatan;
+            }).firstOrNull;
+          }
+          if (custom != null) {
+            matchedPengurusIds.add(custom.id);
+          }
+        }
+
+        final additionalMembers = state.pengurusList.where((p) {
+          final matchDivisi = currentDivisi.id.isNotEmpty
+              ? p.divisiId == currentDivisi.id
+              : false;
+          return matchDivisi && !matchedPengurusIds.contains(p.id);
+        }).toList();
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -512,7 +732,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Daftar Anggota (${defaultMembers.length})',
+                      'Daftar Anggota (${defaultMembers.length + additionalMembers.length})',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -581,7 +801,7 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
 
                     ImageProvider imageProvider;
                     if (isCustom) {
-                      imageProvider = NetworkImage(custom!.fotoUrl!);
+                      imageProvider = NetworkImage(custom.fotoUrl!);
                     } else {
                       imageProvider = AssetImage(member.defaultAsset);
                     }
@@ -697,6 +917,151 @@ class _HimtikaPengurusTabState extends State<HimtikaPengurusTab> {
                     );
                   },
                 ),
+                if (additionalMembers.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Icon(Icons.group_add_outlined,
+                          size: 20, color: Color(0xFF0175C8)),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Anggota Tambahan (${additionalMembers.length})',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0175C8),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: additionalMembers.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final member = additionalMembers[index];
+                      final bool hasFoto = member.fotoUrl != null &&
+                          member.fotoUrl!.isNotEmpty;
+
+                      return Card(
+                        elevation: 1.5,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          child: Row(
+                            children: [
+                              // Avatar
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: hasFoto
+                                    ? Image.network(
+                                        member.fotoUrl!,
+                                        width: 56,
+                                        height: 56,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Container(
+                                          width: 56,
+                                          height: 56,
+                                          color: Colors.grey.shade300,
+                                          child: const Icon(Icons.person,
+                                              color: Colors.grey),
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 56,
+                                        height: 56,
+                                        color: Colors.grey.shade200,
+                                        child: const Icon(Icons.person,
+                                            color: Colors.grey),
+                                      ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Jabatan & Nama
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      member.jabatan,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Color(0xFF0175C8),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      member.nama,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade50,
+                                        borderRadius:
+                                            BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: Colors.blue.shade300,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Anggota Tambahan',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blue.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Actions
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Edit Anggota',
+                                    icon: const Icon(Icons.edit_outlined,
+                                        color: Color(0xFF0175C8)),
+                                    onPressed: () =>
+                                        _showEditCustomMemberDialog(
+                                      context,
+                                      pengurus: member,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Hapus Anggota',
+                                    icon: const Icon(Icons.delete_outline,
+                                        color: Colors.redAccent),
+                                    onPressed: () =>
+                                        _confirmDeleteAdditional(
+                                      context,
+                                      member,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
