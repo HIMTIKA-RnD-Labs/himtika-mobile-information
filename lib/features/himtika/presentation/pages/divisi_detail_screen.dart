@@ -381,6 +381,49 @@ class DivisiDetailScreen extends StatelessWidget {
                   )
                 : null,
           ),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                position,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 4,
+                      color: Colors.black87,
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                name,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white70,
+                  fontSize: 16,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 4,
+                      color: Colors.black87,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

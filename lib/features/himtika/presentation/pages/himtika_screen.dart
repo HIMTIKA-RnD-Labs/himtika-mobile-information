@@ -222,6 +222,8 @@ class HimtikaScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 child: _buildDivisiCard(
                   imagePath: part['imagePath']!,
+                  title: part['title']!,
+                  isCustom: part['isCustom'] == 'true',
                 ),
               );
             },
@@ -440,9 +442,15 @@ class HimtikaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDivisiCard({required String imagePath}) {
+  Widget _buildDivisiCard({
+    required String imagePath,
+    required String title,
+    bool isCustom = false,
+  }) {
     final isNetwork =
         imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    final showTitle = isCustom || isNetwork;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -460,6 +468,46 @@ class HimtikaScreen extends StatelessWidget {
             fit: BoxFit.cover,
           ),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        alignment: Alignment.bottomLeft,
+        child: showTitle
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 4,
+                            color: Colors.black87,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 16,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 4,
+                        color: Colors.black87,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : null,
       ),
     );
   }
