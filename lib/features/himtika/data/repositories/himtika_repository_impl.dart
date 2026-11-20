@@ -31,6 +31,8 @@ class HimtikaRepositoryImpl implements HimtikaRepository {
       periode: kabinet.periode,
       isActive: kabinet.isActive,
       nilaiKabinet: kabinet.nilaiKabinet,
+      maknaLogo: kabinet.maknaLogo,
+      warnaNama: kabinet.warnaNama,
     );
     await remoteDataSource.updateKabinet(model);
   }

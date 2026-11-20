@@ -10,6 +10,7 @@ class HimtikaState extends Equatable {
     this.kabinetTagline =
         'Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, Sistematis',
     this.kabinetLogoPath = 'src/features/himtika/images/kabinet.png',
+    this.kabinetNameColor,
   });
 
   final HimtikaStatus status;
@@ -17,6 +18,7 @@ class HimtikaState extends Equatable {
   final String kabinetName;
   final String kabinetTagline;
   final String kabinetLogoPath;
+  final String? kabinetNameColor;
 
   HimtikaState copyWith({
     HimtikaStatus? status,
@@ -24,6 +26,7 @@ class HimtikaState extends Equatable {
     String? kabinetName,
     String? kabinetTagline,
     String? kabinetLogoPath,
+    String? kabinetNameColor,
   }) {
     return HimtikaState(
       status: status ?? this.status,
@@ -31,10 +34,17 @@ class HimtikaState extends Equatable {
       kabinetName: kabinetName ?? this.kabinetName,
       kabinetTagline: kabinetTagline ?? this.kabinetTagline,
       kabinetLogoPath: kabinetLogoPath ?? this.kabinetLogoPath,
+      kabinetNameColor: kabinetNameColor ?? this.kabinetNameColor,
     );
   }
 
   @override
-  List<Object> get props =>
-      [status, importantParts, kabinetName, kabinetTagline, kabinetLogoPath];
+  List<Object?> get props => [
+        status,
+        importantParts,
+        kabinetName,
+        kabinetTagline,
+        kabinetLogoPath,
+        kabinetNameColor,
+      ];
 }

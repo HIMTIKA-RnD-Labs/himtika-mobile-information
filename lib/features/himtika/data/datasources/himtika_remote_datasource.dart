@@ -50,11 +50,36 @@ class HimtikaRemoteDataSourceImpl implements HimtikaRemoteDataSource {
   @override
   Future<void> updateKabinet(HimtikaKabinetModel kabinet) async {
     final data = kabinet.toJson();
+
+    // Fallback: simpan juga di nilai_kabinet agar warna tetap tersimpan
+    // meskipun kolom warna_nama belum dibuat di Supabase
+    if (kabinet.warnaNama != null && kabinet.warnaNama!.isNotEmpty) {
+      final currentNilai = List<Map<String, dynamic>>.from(
+        (data['nilai_kabinet'] as List?) ?? [],
+      );
+      currentNilai.removeWhere((item) => item['title'] == '__warna_nama__');
+      currentNilai.add({
+        'title': '__warna_nama__',
+        'description': kabinet.warnaNama!,
+      });
+      data['nilai_kabinet'] = currentNilai;
+    }
+
     if (kabinet.id.isEmpty) {
       data.remove('id');
-      await SupabaseTableHelper.table('himtika_kabinet').insert(data);
+      try {
+        await SupabaseTableHelper.table('himtika_kabinet').insert(data);
+      } catch (_) {
+        data.remove('warna_nama');
+        await SupabaseTableHelper.table('himtika_kabinet').insert(data);
+      }
     } else {
-      await SupabaseTableHelper.table('himtika_kabinet').upsert(data);
+      try {
+        await SupabaseTableHelper.table('himtika_kabinet').upsert(data);
+      } catch (_) {
+        data.remove('warna_nama');
+        await SupabaseTableHelper.table('himtika_kabinet').upsert(data);
+      }
     }
   }
 

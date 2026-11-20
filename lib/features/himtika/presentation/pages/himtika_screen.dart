@@ -282,11 +282,8 @@ class HimtikaScreen extends StatelessWidget {
                       children: [
                         ShaderMask(
                           blendMode: BlendMode.srcIn,
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [
-                              Color(0xFF4D2A7C),
-                              Color(0xFF9C4895),
-                            ],
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: _parseKabinetColors(state.kabinetNameColor),
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ).createShader(
@@ -465,5 +462,32 @@ class HimtikaScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<Color> _parseKabinetColors(String? hexString) {
+    const defaultColors = [Color(0xFF4D2A7C), Color(0xFF9C4895)];
+    if (hexString == null || hexString.trim().isEmpty) {
+      return defaultColors;
+    }
+    try {
+      final parts = hexString
+          .split(',')
+          .map((s) => s.trim().replaceAll('#', ''))
+          .where((s) => s.isNotEmpty)
+          .toList();
+      Color parsePart(String raw) {
+        String hex = raw;
+        if (hex.length == 6) hex = 'FF$hex';
+        return Color(int.parse(hex, radix: 16));
+      }
+
+      if (parts.length >= 2) {
+        return [parsePart(parts[0]), parsePart(parts[1])];
+      } else if (parts.length == 1) {
+        final c = parsePart(parts[0]);
+        return [c, c];
+      }
+    } catch (_) {}
+    return defaultColors;
   }
 }

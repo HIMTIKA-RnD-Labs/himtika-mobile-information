@@ -11,6 +11,7 @@ class HimtikaKabinetModel extends HimtikaKabinet {
     super.isActive,
     super.nilaiKabinet,
     super.maknaLogo,
+    super.warnaNama,
   });
 
   factory HimtikaKabinetModel.fromJson(Map<String, dynamic> json) {
@@ -43,6 +44,14 @@ class HimtikaKabinetModel extends HimtikaKabinet {
       }).where((item) => item.isNotEmpty).toList();
     }
 
+    String? warnaNama = json['warna_nama'] as String?;
+    if (warnaNama == null || warnaNama.isEmpty) {
+      final meta = parsedNilai.where((e) => e['title'] == '__warna_nama__').firstOrNull;
+      if (meta != null && meta['description'] != null && meta['description']!.isNotEmpty) {
+        warnaNama = meta['description'];
+      }
+    }
+
     return HimtikaKabinetModel(
       id: json['id'] as String,
       namaKabinet: json['nama_kabinet'] as String? ?? '',
@@ -53,6 +62,7 @@ class HimtikaKabinetModel extends HimtikaKabinet {
       isActive: json['is_active'] as bool? ?? true,
       nilaiKabinet: parsedNilai,
       maknaLogo: parsedMaknaLogo,
+      warnaNama: warnaNama,
     );
   }
 
@@ -67,6 +77,7 @@ class HimtikaKabinetModel extends HimtikaKabinet {
       'is_active': isActive,
       'nilai_kabinet': nilaiKabinet,
       'makna_logo': maknaLogo,
+      if (warnaNama != null && warnaNama!.isNotEmpty) 'warna_nama': warnaNama,
     };
   }
 }

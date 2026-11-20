@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:himtika_mobile_information/features/himtika/data/datasources/himtika_default_structure.dart';
-import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_divisi.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_pengurus.dart';
 import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
 

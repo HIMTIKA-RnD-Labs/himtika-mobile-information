@@ -21,6 +21,7 @@ class HimtikaBloc extends Bloc<HimtikaEvent, HimtikaState> {
     String kabinetTagline =
         'Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, Sistematis';
     String kabinetLogoPath = 'src/features/himtika/images/kabinet.png';
+    String? kabinetNameColor;
 
     try {
       if (repository != null) {
@@ -33,6 +34,7 @@ class HimtikaBloc extends Bloc<HimtikaEvent, HimtikaState> {
             kabinetTagline = activeKabinet.tagline!;
           } else if (activeKabinet.nilaiKabinet.isNotEmpty) {
             final titles = activeKabinet.nilaiKabinet
+                .where((e) => e['title'] != '__warna_nama__')
                 .map((e) => e['title'] ?? '')
                 .where((t) => t.isNotEmpty)
                 .toList();
@@ -42,6 +44,9 @@ class HimtikaBloc extends Bloc<HimtikaEvent, HimtikaState> {
           }
           if (activeKabinet.logoUrl != null && activeKabinet.logoUrl!.isNotEmpty) {
             kabinetLogoPath = activeKabinet.logoUrl!;
+          }
+          if (activeKabinet.warnaNama != null && activeKabinet.warnaNama!.isNotEmpty) {
+            kabinetNameColor = activeKabinet.warnaNama;
           }
         }
       }
@@ -86,6 +91,7 @@ class HimtikaBloc extends Bloc<HimtikaEvent, HimtikaState> {
       kabinetName: kabinetName,
       kabinetTagline: kabinetTagline,
       kabinetLogoPath: kabinetLogoPath,
+      kabinetNameColor: kabinetNameColor,
     ));
   }
 }

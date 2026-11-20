@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.himtika_kabinet (
 -- Migration jika tabel sudah ada sebelumnya:
 ALTER TABLE public.himtika_kabinet ADD COLUMN IF NOT EXISTS nilai_kabinet JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.himtika_kabinet ADD COLUMN IF NOT EXISTS makna_logo JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.himtika_kabinet ADD COLUMN IF NOT EXISTS warna_nama TEXT;
 
 CREATE TABLE IF NOT EXISTS public.himtika_about (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

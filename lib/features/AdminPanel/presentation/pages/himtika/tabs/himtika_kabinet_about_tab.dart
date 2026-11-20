@@ -20,6 +20,7 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
   final _formKeyAbout = GlobalKey<FormState>();
 
   late TextEditingController _namaKabinetController;
+  late TextEditingController _warnaNamaController;
   late TextEditingController _taglineController;
   late TextEditingController _deskripsiKabinetController;
   late TextEditingController _periodeController;
@@ -42,13 +43,82 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
   void initState() {
     super.initState();
     _namaKabinetController = TextEditingController();
+    _warnaNamaController = TextEditingController();
     _taglineController = TextEditingController();
     _deskripsiKabinetController = TextEditingController();
     _periodeController = TextEditingController();
 
     _visiController = TextEditingController();
 
+    _namaKabinetController.addListener(() => setState(() {}));
+    _warnaNamaController.addListener(() => setState(() {}));
+
     _initDataFromState(context.read<HimtikaManagementBloc>().state);
+  }
+
+  static const List<Map<String, dynamic>> presetColors = [
+    {
+      'name': 'Ungu (Bawaan)',
+      'value': '#4D2A7C,#9C4895',
+      'colors': [Color(0xFF4D2A7C), Color(0xFF9C4895)],
+    },
+    {
+      'name': 'Biru HIMTIKA',
+      'value': '#0175C8,#004B87',
+      'colors': [Color(0xFF0175C8), Color(0xFF004B87)],
+    },
+    {
+      'name': 'Biru Cyan',
+      'value': '#06B6D4,#0284C7',
+      'colors': [Color(0xFF06B6D4), Color(0xFF0284C7)],
+    },
+    {
+      'name': 'Hijau Emerald',
+      'value': '#10B981,#059669',
+      'colors': [Color(0xFF10B981), Color(0xFF059669)],
+    },
+    {
+      'name': 'Oranye Sunset',
+      'value': '#F59E0B,#EA580C',
+      'colors': [Color(0xFFF59E0B), Color(0xFFEA580C)],
+    },
+    {
+      'name': 'Merah Ruby',
+      'value': '#EF4444,#B91C1C',
+      'colors': [Color(0xFFEF4444), Color(0xFFB91C1C)],
+    },
+    {
+      'name': 'Hitam Gelap',
+      'value': '#1E293B,#0F172A',
+      'colors': [Color(0xFF1E293B), Color(0xFF0F172A)],
+    },
+  ];
+
+  static List<Color> _parseColors(String? hexString) {
+    const defaultColors = [Color(0xFF4D2A7C), Color(0xFF9C4895)];
+    if (hexString == null || hexString.trim().isEmpty) {
+      return defaultColors;
+    }
+    try {
+      final parts = hexString
+          .split(',')
+          .map((s) => s.trim().replaceAll('#', ''))
+          .where((s) => s.isNotEmpty)
+          .toList();
+      Color parsePart(String raw) {
+        String hex = raw;
+        if (hex.length == 6) hex = 'FF$hex';
+        return Color(int.parse(hex, radix: 16));
+      }
+
+      if (parts.length >= 2) {
+        return [parsePart(parts[0]), parsePart(parts[1])];
+      } else if (parts.length == 1) {
+        final c = parsePart(parts[0]);
+        return [c, c];
+      }
+    } catch (_) {}
+    return defaultColors;
   }
 
   static const List<Map<String, String>> defaultNilaiKabinet = [
@@ -126,6 +196,7 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
   void _initDataFromState(HimtikaManagementState state) {
     if (state.kabinet != null) {
       _namaKabinetController.text = state.kabinet!.namaKabinet;
+      _warnaNamaController.text = state.kabinet!.warnaNama ?? '#4D2A7C,#9C4895';
       _taglineController.text = state.kabinet!.tagline ?? '';
       _deskripsiKabinetController.text = state.kabinet!.deskripsi ?? '';
       _periodeController.text = state.kabinet!.periode;
@@ -139,9 +210,11 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
       _nilaiTitleControllers.clear();
       _nilaiDescControllers.clear();
 
-      final listToUse = state.kabinet!.nilaiKabinet.isNotEmpty
-          ? state.kabinet!.nilaiKabinet
-          : defaultNilaiKabinet;
+      final listToUse = (state.kabinet!.nilaiKabinet.isNotEmpty
+              ? state.kabinet!.nilaiKabinet
+              : defaultNilaiKabinet)
+          .where((item) => item['title'] != '__warna_nama__')
+          .toList();
 
       for (var item in listToUse) {
         _nilaiTitleControllers.add(TextEditingController(text: item['title'] ?? ''));
@@ -171,6 +244,7 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
     } else {
       if (_namaKabinetController.text.isEmpty) {
         _namaKabinetController.text = 'SINERGIS';
+        _warnaNamaController.text = '#4D2A7C,#9C4895';
         _taglineController.text = 'Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, Sistematis';
         _periodeController.text = '2024/2025';
         _deskripsiKabinetController.text = 'Sinergis mencerminkan nilai-nilai utama yang dijunjung tinggi oleh kami, yaitu Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, dan Sistematis. Setiap elemen dalam logo kami melambangkan komitmen kami untuk memberikan kontribusi nyata pada masyarakat informatika.';
@@ -240,6 +314,7 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
   @override
   void dispose() {
     _namaKabinetController.dispose();
+    _warnaNamaController.dispose();
     _taglineController.dispose();
     _deskripsiKabinetController.dispose();
     _periodeController.dispose();
@@ -392,6 +467,7 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         isActive: currentKabinet?.isActive ?? true,
         nilaiKabinet: nilaiKabinet,
         maknaLogo: maknaLogo,
+        warnaNama: _warnaNamaController.text.trim(),
       );
 
       context.read<HimtikaManagementBloc>().add(
@@ -543,6 +619,171 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
                           validator: (value) => value == null || value.trim().isEmpty
                               ? 'Nama Kabinet tidak boleh kosong'
                               : null,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Warna Nama Kabinet (Tampilan Depan)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Warna Nama Kabinet (Tampilan Depan)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF333333),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Pilihan Cepat Warna
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: presetColors.map((preset) {
+                                final isSelected =
+                                    _warnaNamaController.text.trim().toLowerCase() ==
+                                        preset['value'].toString().toLowerCase();
+                                final List<Color> colors = preset['colors'] as List<Color>;
+
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      _warnaNamaController.text = preset['value'] as String;
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? const Color(0xFF0175C8)
+                                              .withValues(alpha: 0.1)
+                                          : Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFF0175C8)
+                                            : Colors.grey.shade300,
+                                        width: isSelected ? 1.8 : 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: LinearGradient(
+                                              colors: colors,
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          preset['name'] as String,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: isSelected
+                                                ? const Color(0xFF0175C8)
+                                                : Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Input Manual Hex
+                            TextFormField(
+                              controller: _warnaNamaController,
+                              decoration: InputDecoration(
+                                labelText: 'Kode HEX Warna / Gradien',
+                                hintText: 'Contoh: #4D2A7C,#9C4895 atau #0175C8',
+                                helperText:
+                                    '1 warna (#0175C8) atau 2 warna dipisah koma untuk gradien',
+                                prefixIcon: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: LinearGradient(
+                                        colors: _parseColors(_warnaNamaController.text),
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      border: Border.all(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Live Preview
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    'Preview: ',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ShaderMask(
+                                      blendMode: BlendMode.srcIn,
+                                      shaderCallback: (bounds) => LinearGradient(
+                                        colors: _parseColors(_warnaNamaController.text),
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                      ).createShader(
+                                        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                                      ),
+                                      child: Text(
+                                        (_namaKabinetController.text.isNotEmpty
+                                                ? _namaKabinetController.text
+                                                : 'SINERGIS')
+                                            .toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 14),
 
