@@ -90,7 +90,9 @@ class KabinetBloc extends Bloc<KabinetEvent, KabinetState> {
             aboutSinergis = activeKabinet.deskripsi!;
           }
           if (activeKabinet.nilaiKabinet.isNotEmpty) {
-            kabinetCards = activeKabinet.nilaiKabinet;
+            kabinetCards = activeKabinet.nilaiKabinet
+                .where((e) => e['title'] != '__warna_nama__')
+                .toList();
           }
           if (activeKabinet.maknaLogo.isNotEmpty) {
             logoMeanings = activeKabinet.maknaLogo;

@@ -433,10 +433,12 @@ class _HimtikaKabinetAboutTabState extends State<HimtikaKabinetAboutTab> {
         final title = _nilaiTitleControllers[i].text.trim();
         final desc = _nilaiDescControllers[i].text.trim();
         if (title.isNotEmpty || desc.isNotEmpty) {
-          nilaiKabinet.add({
-            'title': title,
-            'description': desc,
-          });
+          if (title != '__warna_nama__') {
+            nilaiKabinet.add({
+              'title': title,
+              'description': desc,
+            });
+          }
         }
       }
 

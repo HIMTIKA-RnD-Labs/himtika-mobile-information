@@ -45,11 +45,13 @@ class HimtikaKabinetModel extends HimtikaKabinet {
     }
 
     String? warnaNama = json['warna_nama'] as String?;
-    if (warnaNama == null || warnaNama.isEmpty) {
-      final meta = parsedNilai.where((e) => e['title'] == '__warna_nama__').firstOrNull;
-      if (meta != null && meta['description'] != null && meta['description']!.isNotEmpty) {
-        warnaNama = meta['description'];
+    final metaIndex =
+        parsedNilai.indexWhere((e) => e['title'] == '__warna_nama__');
+    if (metaIndex != -1) {
+      if (warnaNama == null || warnaNama.isEmpty) {
+        warnaNama = parsedNilai[metaIndex]['description'];
       }
+      parsedNilai.removeWhere((e) => e['title'] == '__warna_nama__');
     }
 
     return HimtikaKabinetModel(
