@@ -44,3 +44,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Documentation & Analysis
+PROJECT_ANALYSIS.md
+PRD_HIMTIKA_MANAGEMENT.md
+REVERT_TESTING_MODE.md
+

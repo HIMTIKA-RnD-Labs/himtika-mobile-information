@@ -18,7 +18,8 @@ class HomeRemoteDatasourceImpl implements HomeRemoteDatasource {
 
   @override
   Future<List<Map<String, dynamic>>> getDivisions() async {
-    final response = await client.from('divisions').select().order('order');
+    final response =
+        await client.from('himtika_divisi').select().order('urutan');
     return List<Map<String, dynamic>>.from(response);
   }
 }

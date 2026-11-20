@@ -1,5 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:himtika_mobile_information/features/auth/domain/entities/user.dart';
+import 'package:himtika_mobile_information/features/roles/domain/entities/role.dart';
+import 'package:himtika_mobile_information/features/home/domain/entities/home_banner.dart';
+import 'package:himtika_mobile_information/features/home/domain/entities/division.dart';
 import 'package:himtika_mobile_information/features/auth/domain/usecases/get_current_user.dart';
 import 'package:himtika_mobile_information/features/home/domain/usecases/get_home_content.dart';
 import 'package:himtika_mobile_information/features/roles/domain/usecases/get_my_roles.dart';
@@ -24,36 +28,39 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   Future<void> _onLoadHomeData(
       LoadHomeData event, Emitter<HomeState> emit) async {
-    // Tampilkan loading HANYA jika data belum ada
     if (state.currentUser == null) {
       emit(state.copyWith(isLoading: true));
     }
-    
+
+    User? user;
     try {
-      final user = await _getCurrentUser();
-      final roles = await _getMyRoles();
-      final (banners, divisions) = await _getHomeContent();
+      user = await _getCurrentUser();
+    } catch (_) {}
 
-      final isPengurus = roles.any((role) => role.groupName == 'Pengurus');
+    List<Role> roles = [];
+    try {
+      roles = await _getMyRoles();
+    } catch (_) {}
 
-      emit(state.copyWith(
-        isLoading: false, // Selalu set false setelah selesai
-        currentUser: user,
-        isPengurus: isPengurus,
-        banners: banners,
-        divisions: divisions,
-        currentUserRoles: roles,
-      ));
-    } catch (e, stackTrace) { // <-- UBAH DI SINI
-      // 2. Log Licik
+    List<HomeBanner> banners = [];
+    List<Division> divisions = [];
+    try {
+      final content = await _getHomeContent();
+      banners = content.$1;
+      divisions = content.$2;
+    } catch (e, stackTrace) {
       Sentry.captureException(e, stackTrace: stackTrace);
-
-      // 3. Pesan Profesional (untuk Home, kita tidak tampilkan error, cukup set isLoading = false)
-      emit(state.copyWith(
-        isLoading: false 
-        // Kita tidak perlu errorMessage di home, 
-        // tapi jika ingin, tambahkan propertinya di HomeState
-      )); 
     }
+
+    final isPengurus = roles.any((role) => role.groupName == 'Pengurus');
+
+    emit(state.copyWith(
+      isLoading: false,
+      currentUser: user,
+      isPengurus: isPengurus,
+      banners: banners,
+      divisions: divisions,
+      currentUserRoles: roles,
+    ));
   }
 }

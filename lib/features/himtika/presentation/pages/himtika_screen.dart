@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:himtika_mobile_information/core/injection_container.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/bloc/himtika_screen/himtika_bloc.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/notification_page.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/pages/about_himtika_screen.dart';
@@ -14,7 +15,7 @@ class HimtikaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => HimtikaBloc()..add(FetchHimtikaData()),
+      create: (context) => sl<HimtikaBloc>()..add(FetchHimtikaData()),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         body: SafeArea(
@@ -81,16 +82,17 @@ class HimtikaScreen extends StatelessWidget {
   }
 
   Widget _buildBlueHeader(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth * 0.9).clamp(280.0, 520.0);
     return Container(
       width: double.infinity,
       color: Colors.blue,
       child: Column(
         children: [
           Transform.translate(
-            offset: const Offset(
-                0, 40), 
+            offset: const Offset(0, 40),
             child: Container(
-              width: MediaQuery.of(context).size.width * 0.9,
+              width: cardWidth,
               padding: const EdgeInsets.all(20.0),
               decoration: BoxDecoration(
                 color: Colors.transparent,
@@ -102,7 +104,7 @@ class HimtikaScreen extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -189,7 +191,7 @@ class HimtikaScreen extends StatelessWidget {
           const Text('Kabinet Saat Ini',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _buildKabinetCard(context),
+          _buildKabinetCard(context, state),
           const SizedBox(height: 20),
           const Text('Sejarah HIMTIKA',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -208,17 +210,20 @@ class HimtikaScreen extends StatelessWidget {
               final part = state.importantParts[index];
               return InkWell(
                 onTap: () {
-                  // 2. Navigasi ke halaman detail dengan ID
+                  // Navigasi ke halaman detail dengan ID divisi
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            DivisiDetailScreen(divisiId: part['title']!)),
+                      builder: (_) =>
+                          DivisiDetailScreen(divisiId: part['title']!),
+                    ),
                   );
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: _buildDivisiCard(
                   imagePath: part['imagePath']!,
+                  title: part['title']!,
+                  isCustom: part['isCustom'] == 'true',
                 ),
               );
             },
@@ -229,30 +234,47 @@ class HimtikaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildKabinetCard(BuildContext context) { // 1. Tambahkan context
-  return InkWell( 
-    onTap: () { 
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const KabinetScreen()),
-      );
-    },
-    borderRadius: BorderRadius.circular(15), // Samakan radius
-    child: Card(
-      elevation: 2,
-      color: const Color(0xFFF5F9FF),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset(
-                'src/features/himtika/images/kabinet.png',
-                width: 100,
-                height: 100,
-              ),
-              const SizedBox(width: 16),
+  Widget _buildKabinetCard(BuildContext context, HimtikaState state) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final logoSize = (screenWidth * 0.22).clamp(60.0, 100.0);
+    return InkWell( 
+      onTap: () { 
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const KabinetScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(15),
+      child: Card(
+        elevation: 2,
+        color: const Color(0xFFF5F9FF),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                state.kabinetLogoPath.startsWith('http://') ||
+                        state.kabinetLogoPath.startsWith('https://')
+                    ? Image.network(
+                        state.kabinetLogoPath,
+                        width: logoSize,
+                        height: logoSize,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'src/features/himtika/images/kabinet.png',
+                          width: logoSize,
+                          height: logoSize,
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    : Image.asset(
+                        state.kabinetLogoPath,
+                        width: logoSize,
+                        height: logoSize,
+                        fit: BoxFit.contain,
+                      ),
+                const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,37 +284,34 @@ class HimtikaScreen extends StatelessWidget {
                       children: [
                         ShaderMask(
                           blendMode: BlendMode.srcIn,
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [
-                              Color(0xFF4D2A7C),
-                              Color(0xFF9C4895),
-                            ],
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: _parseKabinetColors(state.kabinetNameColor),
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ).createShader(
                             Rect.fromLTWH(0, 0, bounds.width, bounds.height),
                           ),
-                          child: const Text(
-                            'SINERGIS',
-                            style: TextStyle(
+                          child: Text(
+                            state.kabinetName.toUpperCase(),
+                            style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Padding(
+                            const Padding(
                               padding: EdgeInsets.only(top: 2.0, right: 4.0),
                               child:
                                   Icon(Icons.star, color: Colors.amber, size: 14),
                             ),
                             Expanded(
                               child: Text(
-                                'Sinergi, Inovatif, Eksplorasi, Responsif, Generalis, Sistematis',
-                                style: TextStyle(
+                                state.kabinetTagline,
+                                style: const TextStyle(
                                     color: Colors.black54, fontSize: 10),
                               ),
                             ),
@@ -329,11 +348,11 @@ class HimtikaScreen extends StatelessWidget {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFFFDBF7FF), // Warna fallback
+        color: const Color(0xFFFDBF7F), // Warna fallback
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           )
@@ -352,7 +371,7 @@ class HimtikaScreen extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0), // Transparan
+                color: Colors.white.withValues(alpha: 0), // Transparan
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -423,7 +442,15 @@ class HimtikaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDivisiCard({required String imagePath}) {
+  Widget _buildDivisiCard({
+    required String imagePath,
+    required String title,
+    bool isCustom = false,
+  }) {
+    final isNetwork =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    final showTitle = isCustom || isNetwork;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
@@ -433,12 +460,82 @@ class HimtikaScreen extends StatelessWidget {
       child: Container(
         height: 150,
         decoration: BoxDecoration(
+          color: const Color(0xFF0175C8),
           image: DecorationImage(
-            image: AssetImage(imagePath),
+            image: isNetwork
+                ? NetworkImage(imagePath) as ImageProvider
+                : AssetImage(imagePath),
             fit: BoxFit.cover,
           ),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        alignment: Alignment.bottomLeft,
+        child: showTitle
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.3,
+                        shadows: [
+                          Shadow(
+                            offset: Offset(0, 1),
+                            blurRadius: 4,
+                            color: Colors.black87,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 16,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 1),
+                        blurRadius: 4,
+                        color: Colors.black87,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            : null,
       ),
     );
+  }
+
+  List<Color> _parseKabinetColors(String? hexString) {
+    const defaultColors = [Color(0xFF4D2A7C), Color(0xFF9C4895)];
+    if (hexString == null || hexString.trim().isEmpty) {
+      return defaultColors;
+    }
+    try {
+      final parts = hexString
+          .split(',')
+          .map((s) => s.trim().replaceAll('#', ''))
+          .where((s) => s.isNotEmpty)
+          .toList();
+      Color parsePart(String raw) {
+        String hex = raw;
+        if (hex.length == 6) hex = 'FF$hex';
+        return Color(int.parse(hex, radix: 16));
+      }
+
+      if (parts.length >= 2) {
+        return [parsePart(parts[0]), parsePart(parts[1])];
+      } else if (parts.length == 1) {
+        final c = parsePart(parts[0]);
+        return [c, c];
+      }
+    } catch (_) {}
+    return defaultColors;
   }
 }

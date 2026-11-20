@@ -1,5 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:himtika_mobile_information/features/himtika/data/datasources/himtika_default_structure.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/entities/himtika_pengurus.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
 
 part 'divisi_detail_event.dart';
 part 'divisi_detail_state.dart';
@@ -432,30 +435,339 @@ final Map<String, Map<String, dynamic>> _divisiDatabase = {
 };
 
 class DivisiDetailBloc extends Bloc<DivisiDetailEvent, DivisiDetailState> {
-  DivisiDetailBloc() : super(const DivisiDetailState()) {
+  final HimtikaRepository? repository;
+
+  DivisiDetailBloc({this.repository}) : super(const DivisiDetailState()) {
     on<FetchDivisiData>(_onFetchDivisiData);
   }
 
   Future<void> _onFetchDivisiData(
       FetchDivisiData event, Emitter<DivisiDetailState> emit) async {
     emit(state.copyWith(status: DivisiDetailStatus.loading));
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 200));
 
-    final data = _divisiDatabase[event.divisiId];
+    // 1. Ambil blueprint divisi statis
+    Map<String, dynamic>? blueprint = _divisiDatabase[event.divisiId];
+    if (blueprint == null && event.divisiTitle != null) {
+      blueprint = _divisiDatabase[event.divisiTitle!];
+    }
+    if (blueprint == null) {
+      for (final entry in _divisiDatabase.entries) {
+        final cleanKey = entry.key.toLowerCase().replaceAll('divisi ', '').trim();
+        final cleanTarget = event.divisiId.toLowerCase().replaceAll('divisi ', '').trim();
+        if (cleanKey == cleanTarget || cleanTarget.contains(cleanKey) || cleanKey.contains(cleanTarget)) {
+          blueprint = entry.value;
+          break;
+        }
+      }
+    }
 
-    if (data != null) {
-      final divisionHeadData = data['divisionHead'] as Map<String, dynamic>?;
-      emit(state.copyWith(
-        status: DivisiDetailStatus.success,
-        title: data['title'],
-        gradientTitle: data['gradientTitle'],
-        description: data['description'],
-        heroLogoPath: data['heroLogoPath'],
-        divisionHead: divisionHeadData != null ? Map<String, String>.from(divisionHeadData) : null,
-        departments: List<Map<String, dynamic>>.from(data['departments']),
-      ));
-    } else {
+    if (blueprint == null) {
       emit(state.copyWith(status: DivisiDetailStatus.failure));
+      return;
+    }
+
+    // 2. Clone blueprint agar tata letak, judul, dan deskripsi departemen tetap utuh
+    final String title = blueprint['title'] ?? '';
+    final String? gradientTitle = blueprint['gradientTitle'];
+    final String? description = blueprint['description'];
+    final String heroLogoPath = blueprint['heroLogoPath'] ?? 'src/features/himtika/icon/himtika.png';
+
+    Map<String, String>? divisionHead = blueprint['divisionHead'] != null
+        ? Map<String, String>.from(blueprint['divisionHead'] as Map<String, dynamic>)
+        : null;
+
+    final List<Map<String, dynamic>> departments =
+        (blueprint['departments'] as List<dynamic>).map((deptRaw) {
+      final dept = Map<String, dynamic>.from(deptRaw as Map<String, dynamic>);
+      if (dept['departmentHead'] != null) {
+        dept['departmentHead'] =
+            Map<String, String>.from(dept['departmentHead'] as Map<String, dynamic>);
+      }
+      dept['members'] = (dept['members'] as List<dynamic>)
+          .map((m) => Map<String, String>.from(m as Map<String, dynamic>))
+          .toList();
+      return dept;
+    }).toList();
+
+    // 3. Update gambar & nama anggota dari database jika ada inputan admin
+    if (repository != null) {
+      try {
+        final divisiList = await repository!.getDivisiList();
+        final matchedDivisi = divisiList.where((d) {
+          final cleanD = d.namaDivisi.toLowerCase().replaceAll('divisi ', '').trim();
+          final cleanTarget = event.divisiId.toLowerCase().replaceAll('divisi ', '').trim();
+          return cleanD == cleanTarget;
+        }).firstOrNull;
+
+        final pengurusList = matchedDivisi != null
+            ? await repository!.getPengurusByDivisi(matchedDivisi.id)
+            : await repository!.getAllPengurus();
+
+        if (pengurusList.isNotEmpty) {
+          _applyPengurusUpdates(
+            divisiId: matchedDivisi?.id,
+            divisionName: event.divisiId,
+            divisionHead: divisionHead,
+            departments: departments,
+            pengurusList: pengurusList,
+          );
+        }
+      } catch (_) {
+        // Fallback ke data asset bawaan
+      }
+    }
+
+    emit(state.copyWith(
+      status: DivisiDetailStatus.success,
+      title: title,
+      gradientTitle: gradientTitle,
+      description: description,
+      heroLogoPath: heroLogoPath,
+      divisionHead: divisionHead,
+      departments: departments,
+    ));
+  }
+
+  static void _applyPengurusUpdates({
+    String? divisiId,
+    String? divisionName,
+    required Map<String, String>? divisionHead,
+    required List<Map<String, dynamic>> departments,
+    required List<HimtikaPengurus> pengurusList,
+  }) {
+    final usedPengurusIds = <String>{};
+
+    final cleanDivision = (divisionName ?? '')
+        .toLowerCase()
+        .replaceAll('divisi ', '')
+        .trim();
+
+    HimtikaPengurus? findMatch(String? name, String? position) {
+      final targetName = name?.trim().toLowerCase() ?? '';
+      final targetPos = position?.trim().toLowerCase() ?? '';
+
+      // Cari slot default di HimtikaDefaultStructure untuk divisi ini
+      DefaultMember? defaultMember;
+      for (final dm in HimtikaDefaultStructure.allMembers) {
+        final cleanDmDiv =
+            dm.division.toLowerCase().replaceAll('divisi ', '').trim();
+        final matchDiv = cleanDivision.isEmpty || cleanDmDiv == cleanDivision;
+        if (matchDiv && dm.name.trim().toLowerCase() == targetName) {
+          defaultMember = dm;
+          break;
+        }
+      }
+
+      // Jika belum ketemu dan targetPos ada, cari berdasarkan targetPos di divisi ini
+      if (defaultMember == null && targetPos.isNotEmpty) {
+        for (final dm in HimtikaDefaultStructure.allMembers) {
+          final cleanDmDiv =
+              dm.division.toLowerCase().replaceAll('divisi ', '').trim();
+          final matchDiv = cleanDivision.isEmpty || cleanDmDiv == cleanDivision;
+          if (matchDiv && dm.position.trim().toLowerCase() == targetPos) {
+            defaultMember = dm;
+            break;
+          }
+        }
+      }
+
+      // 1. Cocokkan urutan slot & divisi jika diketahui
+      if (defaultMember != null) {
+        for (final p in pengurusList) {
+          if (usedPengurusIds.contains(p.id)) continue;
+          final matchDivisi = divisiId == null || p.divisiId == divisiId;
+          if (matchDivisi && p.urutan == defaultMember.urutan) {
+            return p;
+          }
+        }
+      }
+
+      // 2. Cocokkan nama & posisi persis
+      for (final p in pengurusList) {
+        if (usedPengurusIds.contains(p.id)) continue;
+        if (targetName.isNotEmpty &&
+            targetPos.isNotEmpty &&
+            p.nama.trim().toLowerCase() == targetName &&
+            p.jabatan.trim().toLowerCase() == targetPos) {
+          return p;
+        }
+      }
+
+      // 3. Cocokkan nama persis
+      if (targetName.isNotEmpty) {
+        for (final p in pengurusList) {
+          if (usedPengurusIds.contains(p.id)) continue;
+          if (p.nama.trim().toLowerCase() == targetName) {
+            return p;
+          }
+        }
+      }
+
+      // 4. Cocokkan kemiripan nama dan jabatan yang sama
+      if (targetName.isNotEmpty && targetPos.isNotEmpty) {
+        for (final p in pengurusList) {
+          if (usedPengurusIds.contains(p.id)) continue;
+          final pName = p.nama.trim().toLowerCase();
+          final sameJabatan = p.jabatan.trim().toLowerCase() == targetPos;
+          if (sameJabatan &&
+              (pName.contains(targetName) || targetName.contains(pName))) {
+            return p;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    // 1. Update Division Head (Ketua Divisi sebelum departemen)
+    if (divisionHead != null) {
+      HimtikaPengurus? headMatch;
+
+      // a. Cari pengurus yang jabatannya mengandung 'Ketua Divisi'
+      headMatch = pengurusList.where((p) {
+        if (usedPengurusIds.contains(p.id)) return false;
+        final matchDiv = divisiId == null || p.divisiId == divisiId;
+        return matchDiv &&
+            p.jabatan.trim().toLowerCase().contains('ketua divisi');
+      }).firstOrNull;
+
+      // b. Jika tidak ada, cari slot urutan 1
+      headMatch ??= pengurusList.where((p) {
+        if (usedPengurusIds.contains(p.id)) return false;
+        final matchDiv = divisiId == null || p.divisiId == divisiId;
+        return matchDiv && p.urutan == 1;
+      }).firstOrNull;
+
+      // c. Fallback ke findMatch
+      headMatch ??= findMatch(divisionHead['name'], divisionHead['position']);
+
+      if (headMatch != null) {
+        usedPengurusIds.add(headMatch.id);
+        if (headMatch.fotoUrl != null && headMatch.fotoUrl!.isNotEmpty) {
+          divisionHead['image'] = headMatch.fotoUrl!;
+        }
+        if (headMatch.nama.trim().isNotEmpty) {
+          divisionHead['name'] = headMatch.nama.trim();
+        }
+        if (headMatch.jabatan.trim().isNotEmpty) {
+          divisionHead['position'] = headMatch.jabatan.trim();
+        }
+      }
+
+      // Tandai semua pengurus dengan jabatan 'Ketua Divisi' agar tidak pernah bocor ke anggota departemen
+      for (final p in pengurusList) {
+        if (p.jabatan.trim().toLowerCase().contains('ketua divisi')) {
+          usedPengurusIds.add(p.id);
+        }
+      }
+    }
+
+    // 2. Update Departments
+    for (final dept in departments) {
+      if (dept['departmentHead'] != null) {
+        final head = dept['departmentHead'] as Map<String, String>;
+        var match = findMatch(head['name'], head['position']);
+
+        // Jika belum ketemu, cari berdasarkan nama departemen
+        if (match == null) {
+          final deptTitle = (dept['title'] as String?)?.toLowerCase() ?? '';
+          final cleanDept = deptTitle
+              .replaceAll('departemen', '')
+              .replaceAll('dept.', '')
+              .replaceAll('dept', '')
+              .trim();
+          if (cleanDept.isNotEmpty) {
+            match = pengurusList.where((p) {
+              if (usedPengurusIds.contains(p.id)) return false;
+              final pJabatan = p.jabatan.toLowerCase();
+              final isKadep = pJabatan.contains('ketua dept') ||
+                  pJabatan.contains('kadep') ||
+                  pJabatan.contains('kepala departemen');
+              return isKadep && pJabatan.contains(cleanDept);
+            }).firstOrNull;
+          }
+        }
+
+        if (match != null) {
+          usedPengurusIds.add(match.id);
+          if (match.fotoUrl != null && match.fotoUrl!.isNotEmpty) {
+            head['image'] = match.fotoUrl!;
+          }
+          if (match.nama.trim().isNotEmpty) {
+            head['name'] = match.nama.trim();
+          }
+          if (match.jabatan.trim().isNotEmpty) {
+            head['position'] = match.jabatan.trim();
+          }
+        }
+      }
+
+      final members = dept['members'] as List<Map<String, String>>;
+      for (final m in members) {
+        final match = findMatch(m['name'], m['position']);
+        if (match != null) {
+          usedPengurusIds.add(match.id);
+          if (match.fotoUrl != null && match.fotoUrl!.isNotEmpty) {
+            m['image'] = match.fotoUrl!;
+          }
+          if (match.nama.trim().isNotEmpty) {
+            m['name'] = match.nama.trim();
+          }
+          if (match.jabatan.trim().isNotEmpty) {
+            m['position'] = match.jabatan.trim();
+          }
+        }
+      }
+    }
+
+    // 3. Tambahkan pengurus baru yang belum ada di blueprint bawaan
+    for (final p in pengurusList) {
+      if (usedPengurusIds.contains(p.id)) continue;
+      usedPengurusIds.add(p.id);
+
+      // Jangan pernah masukkan jabatan Ketua Divisi ke dalam departemen
+      if (p.jabatan.trim().toLowerCase().contains('ketua divisi')) {
+        continue;
+      }
+
+      final newMember = {
+        'name': p.nama.trim(),
+        'position': p.jabatan.trim(),
+        'image': p.fotoUrl ?? '',
+      };
+
+      // Coba cocokkan ke departemen yang sesuai berdasarkan nama jabatan
+      bool added = false;
+      final pJabatanLower = p.jabatan.toLowerCase();
+      for (final dept in departments) {
+        final deptTitle = (dept['title'] as String?)?.toLowerCase() ?? '';
+        if (deptTitle.isNotEmpty) {
+          final cleanDept = deptTitle
+              .replaceAll('departemen', '')
+              .replaceAll('dept.', '')
+              .replaceAll('dept', '')
+              .trim();
+          if (cleanDept.isNotEmpty && pJabatanLower.contains(cleanDept)) {
+            (dept['members'] as List<Map<String, String>>).add(newMember);
+            added = true;
+            break;
+          }
+        }
+      }
+
+      if (!added) {
+        if (departments.isNotEmpty) {
+          (departments.last['members'] as List<Map<String, String>>).add(newMember);
+        } else {
+          departments.add({
+            'title': 'Anggota Tambahan',
+            'description': null,
+            'departmentHead': null,
+            'members': [newMember],
+          });
+        }
+      }
     }
   }
 }

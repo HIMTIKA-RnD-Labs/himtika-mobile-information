@@ -152,11 +152,35 @@ import 'package:himtika_mobile_information/features/hicode/presentation/bloc/lea
 
 import 'package:himtika_mobile_information/core/blocs/connectivity_bloc.dart';
 
+// --- Himtika Feature Imports ---
+import 'package:himtika_mobile_information/features/himtika/presentation/bloc/about_himtika/about_himtika_bloc.dart';
+import 'package:himtika_mobile_information/features/himtika/presentation/bloc/divisi_detail/divisi_detail_bloc.dart';
+import 'package:himtika_mobile_information/features/himtika/data/datasources/himtika_remote_datasource.dart';
+import 'package:himtika_mobile_information/features/himtika/data/repositories/himtika_repository_impl.dart';
+import 'package:himtika_mobile_information/features/himtika/domain/repositories/himtika_repository.dart';
+import 'package:himtika_mobile_information/features/AdminPanel/presentation/bloc/himtika_management/himtika_management_bloc.dart';
+import 'package:himtika_mobile_information/features/himtika/presentation/bloc/kabinet_himtika/kabinet_bloc.dart';
+import 'package:himtika_mobile_information/features/himtika/presentation/bloc/himtika_screen/himtika_bloc.dart';
+
 final GetIt sl = GetIt.instance;
 
 Future<void> initDependencies() async {
   // Supabase client
   sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
+
+  // ==================== HIMTIKA FEATURE ====================
+  // Datasource
+  sl.registerLazySingleton<HimtikaRemoteDataSource>(
+      () => HimtikaRemoteDataSourceImpl(client: sl()));
+  // Repository
+  sl.registerLazySingleton<HimtikaRepository>(
+      () => HimtikaRepositoryImpl(remoteDataSource: sl()));
+  // BLoC
+  sl.registerFactory(() => HimtikaManagementBloc(repository: sl<HimtikaRepository>()));
+  sl.registerFactory(() => KabinetBloc(repository: sl<HimtikaRepository>()));
+  sl.registerFactory(() => HimtikaBloc(repository: sl<HimtikaRepository>()));
+  sl.registerFactory(() => AboutHimtikaBloc(repository: sl<HimtikaRepository>()));
+  sl.registerFactory(() => DivisiDetailBloc(repository: sl<HimtikaRepository>()));
 
   // --- CORE BLOCS ---
   sl.registerLazySingleton<ConnectivityBloc>(() => ConnectivityBloc());
@@ -292,7 +316,10 @@ Future<void> initDependencies() async {
       () => HomeRemoteDatasourceImpl(client: sl()));
   // Repository
   sl.registerLazySingleton<HomeRepository>(
-      () => HomeRepositoryImpl(remoteDatasource: sl()));
+      () => HomeRepositoryImpl(
+            remoteDatasource: sl(),
+            himtikaRepository: sl<HimtikaRepository>(),
+          ));
   // Usecases
   sl.registerLazySingleton(() => GetHomeContent(sl()));
   // BLoCs

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-// Sesuaikan path import
+import 'package:himtika_mobile_information/core/injection_container.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/notification_page.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/bloc/kabinet_himtika/kabinet_bloc.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/pages/sejarah_screen.dart';
@@ -11,7 +11,7 @@ class KabinetScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => KabinetBloc()..add(FetchKabinetData()),
+      create: (context) => sl<KabinetBloc>()..add(FetchKabinetData()),
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
@@ -34,7 +34,7 @@ class KabinetScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildHeroImage(state.heroLogoPath),
+                          _buildHeroImage(context, state.heroLogoPath),
                           const SizedBox(height: 24),
                           _buildContent(context, state),
                         ],
@@ -68,12 +68,16 @@ class KabinetScreen extends StatelessWidget {
                   height: 32,
                   color: Colors.white),
             ),
-            const Text(
-              'Kabinet', // Judul halaman
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                'Kabinet',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             IconButton(
@@ -93,10 +97,12 @@ class KabinetScreen extends StatelessWidget {
   }
 
   // Hero Image (Konsisten dengan about_himtika_screen)
-  Widget _buildHeroImage(String imagePath) {
+  Widget _buildHeroImage(BuildContext context, String imagePath) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final heroHeight = (screenHeight * 0.32).clamp(180.0, 300.0);
     return Container(
       width: double.infinity,
-      height: 300,
+      height: heroHeight,
       decoration: const BoxDecoration(
         color: Colors.blue,
         borderRadius: BorderRadius.only(
@@ -105,11 +111,26 @@ class KabinetScreen extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Image.asset(
-          imagePath,
-          width: 300,
-          height: 300,
-          fit: BoxFit.contain,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: imagePath.startsWith('http://') || imagePath.startsWith('https://')
+              ? Image.network(
+                  imagePath,
+                  width: heroHeight * 0.9,
+                  height: heroHeight * 0.9,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 80,
+                  ),
+                )
+              : Image.asset(
+                  imagePath,
+                  width: heroHeight * 0.9,
+                  height: heroHeight * 0.9,
+                  fit: BoxFit.contain,
+                ),
         ),
       ),
     );
@@ -145,9 +166,11 @@ class KabinetScreen extends StatelessWidget {
                         begin: Alignment.topCenter, end: Alignment.bottomCenter,
                       ).createShader(
                           Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
-                      child: const Text('Sinergis?',
-                          style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        '${state.namaKabinet.isNotEmpty ? state.namaKabinet : "Sinergis"}?',
+                        style: const TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ],
@@ -167,41 +190,63 @@ class KabinetScreen extends StatelessWidget {
           const Text('Nilai Kabinet',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          ListView.separated(
-            padding: EdgeInsets.zero,
-            itemCount: state.kabinetCards.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index) {
-              final card = state.kabinetCards[index];
-              return _buildKabinetInfoCard(
-                title: card['title']!,
-                description: card['description']!,
-              );
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-          ),
+          if (state.kabinetCards.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Belum ada nilai kabinet.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: state.kabinetCards.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                final card = state.kabinetCards[index];
+                return _buildKabinetInfoCard(
+                  title: card['title'] ?? '',
+                  description: card['description'] ?? '',
+                );
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
+            ),
           const SizedBox(height: 26),
 
           // --- Section Makna Logo ---
           const Text('Makna Logo Kabinet',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          ListView.separated(
-            padding: EdgeInsets.zero,
-            itemCount: state.logoMeanings.length,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index) {
-              final logo = state.logoMeanings[index];
-              return _buildLogoMeaningRow(
-                logo['icon']!,
-                logo['title']!,
-                logo['description']!,
-              );
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-          ),
+          if (state.logoMeanings.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  'Belum ada makna logo kabinet.',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: state.logoMeanings.length,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                final logo = state.logoMeanings[index];
+                return _buildLogoMeaningRow(
+                  logo['icon'] ?? '',
+                  logo['title'] ?? '',
+                  logo['description'] ?? '',
+                );
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
+            ),
           const SizedBox(height: 24),
 
           _buildSejarahCard(context),
@@ -223,7 +268,7 @@ class KabinetScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -273,7 +318,7 @@ class KabinetScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -284,12 +329,31 @@ class KabinetScreen extends StatelessWidget {
         crossAxisAlignment:
             CrossAxisAlignment.center,
         children: [
-          Image.asset(
-            iconPath,
-            width: 200,
-            height: 100,
-            fit: BoxFit.contain,
-          ),
+          iconPath.startsWith('http://') || iconPath.startsWith('https://')
+              ? Image.network(
+                  iconPath,
+                  width: 200,
+                  height: 100,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image,
+                    size: 60,
+                    color: Colors.grey,
+                  ),
+                )
+              : iconPath.isNotEmpty
+                  ? Image.asset(
+                      iconPath,
+                      width: 200,
+                      height: 100,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(
+                        Icons.image_not_supported,
+                        size: 60,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : const SizedBox(height: 20),
 
           const SizedBox(height: 12),
           Text(
@@ -334,11 +398,11 @@ class KabinetScreen extends StatelessWidget {
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: const Color(0xFFFDBF7FF), // Warna fallback
+          color: const Color(0xFFFDBF7F), // Warna fallback
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, 2),
             )
@@ -358,7 +422,7 @@ class KabinetScreen extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0), // Transparan
+                  color: Colors.white.withValues(alpha: 0), // Transparan
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(

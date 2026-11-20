@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:himtika_mobile_information/core/injection_container.dart';
 import 'package:himtika_mobile_information/features/calendar/presentation/pages/notification_page.dart';
 import 'package:himtika_mobile_information/features/himtika/presentation/bloc/divisi_detail/divisi_detail_bloc.dart';
 
 class DivisiDetailScreen extends StatelessWidget {
   final String divisiId;
-  const DivisiDetailScreen({super.key, required this.divisiId});
+
+  const DivisiDetailScreen({
+    super.key,
+    required this.divisiId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) =>
-          DivisiDetailBloc()..add(FetchDivisiData(divisiId: divisiId)),
+      create: (context) => sl<DivisiDetailBloc>()
+        ..add(FetchDivisiData(divisiId: divisiId)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         body: SafeArea(
@@ -36,7 +41,7 @@ class DivisiDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // --- Hero Image (Konsisten) ---
-                          _buildHeroImage(state.heroLogoPath!),
+                          _buildHeroImage(context, state.heroLogoPath!),
                           const SizedBox(height: 24),
 
                           // --- Konten Putih ---
@@ -74,12 +79,16 @@ class DivisiDetailScreen extends StatelessWidget {
                   height: 32,
                   color: Colors.white),
             ),
-            const Text(
-              'DIVISI', // Judul di tengah (SESUAI FIGMA)
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                'DIVISI',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             IconButton(
@@ -98,10 +107,13 @@ class DivisiDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroImage(String imagePath) {
+  Widget _buildHeroImage(BuildContext context, String imagePath) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final heroHeight = (screenHeight * 0.32).clamp(180.0, 300.0);
+
     return Container(
       width: double.infinity,
-      height: 300,
+      height: heroHeight,
       decoration: const BoxDecoration(
         color: Colors.blue,
         borderRadius: BorderRadius.only(
@@ -110,11 +122,14 @@ class DivisiDetailScreen extends StatelessWidget {
         ),
       ),
       child: Center(
-        child: Image.asset(
-          imagePath, // Menggunakan path dinamis dari BLoC
-          width: 300,
-          height: 300,
-          fit: BoxFit.contain,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Image.asset(
+            imagePath.isNotEmpty ? imagePath : 'src/features/himtika/icon/himtika.png',
+            width: heroHeight * 0.9,
+            height: heroHeight * 0.9,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );
@@ -266,7 +281,7 @@ class DivisiDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -335,52 +350,78 @@ class DivisiDetailScreen extends StatelessWidget {
     );
   }
 
-  // Widget untuk kartu anggota (tidak berubah)
+  // Widget untuk kartu anggota
   Widget _buildMemberCard({
     required BuildContext context,
     required String imagePath,
     required String position,
     required String name,
   }) {
-    // Ambil lebar layar untuk perhitungan
     final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth * 0.88).clamp(260.0, 420.0);
+    final cardHeight = (cardWidth * 0.58).clamp(180.0, 240.0);
+    final isNetwork = imagePath.startsWith('http://') || imagePath.startsWith('https://');
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        width: screenWidth * 0.8, // Contoh: 80% dari lebar layar
-        height: 220,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(imagePath),
-            fit: BoxFit.cover,
+    return Center(
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          width: cardWidth,
+          height: cardHeight,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0175C8),
+            image: imagePath.isNotEmpty
+                ? DecorationImage(
+                    image: isNetwork
+                        ? NetworkImage(imagePath) as ImageProvider
+                        : AssetImage(imagePath),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(position,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22)),
-              Text(name,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white70,
-                      fontSize: 18)),
+              Text(
+                position,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 4,
+                      color: Colors.black87,
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                name,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white70,
+                  fontSize: 16,
+                  shadows: [
+                    Shadow(
+                      offset: Offset(0, 1),
+                      blurRadius: 4,
+                      color: Colors.black87,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
